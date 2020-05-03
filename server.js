@@ -113,7 +113,7 @@ passport.use(
 
 // tell passport how to serialize the user
 passport.serializeUser((user, done) => {
-  done(null, user.id);
+  done(null, user.uuid);
 });
 
 passport.deserializeUser(function (userID, done) {
@@ -172,7 +172,7 @@ app.post("/register", (req, res, next) => {
 
 /// ROUTING
 
-app.get("/ping", function (req, res) {
+app.get("/levsha-api/ping", function (req, res) {
   return res.send("pong");
 });
 
