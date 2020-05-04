@@ -1,5 +1,5 @@
 var baseDomainName = '192kb.ru';
-var basePath = '/levsha-pass'
+var basePath = '/levsha-api'
 
 module.exports = {
     baseDomainName,
