@@ -128,7 +128,7 @@ passport.deserializeUser(function (userID, done) {
   });
 });
 
-app.post(basePath + "/login", (req, res, next) => {
+app.post(basePath + "/user/login", (req, res, next) => {
   passport.authenticate("local", (err, user, info) => {
     if (err) console.log(err);
     if (info) console.log(info);
@@ -148,16 +148,18 @@ app.post(basePath + "/login", (req, res, next) => {
   })(req, res, next);
 });
 
-app.get(basePath + "/logout", function (req, res) {
+app.get(basePath + "/user/logout", function (req, res) {
   req.logout();
   res.send({
     status: "logged-out",
   });
 });
 
-app.post(basePath + "/register", (req, res, next) => {
+app.post(basePath + "/user/signup", (req, res, next) => {
   var query = {
+    uuid: uuidv4(),
     firstname: req.body.firstname,
+    secondname: req.body.secondname,
     lastname: req.body.lastname,
     phone: req.body.phone,
     password_hash: passwordHashFunction(req.body.password),
