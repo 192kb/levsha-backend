@@ -20,6 +20,7 @@ const {
   passwordHashFunction
 } = require("./credentials/salt");
 const {
+  basePath,
   serverPort,
   allowedOrigins,
   cookieMaxAge,
@@ -127,7 +128,7 @@ passport.deserializeUser(function (userID, done) {
   });
 });
 
-app.post("/login", (req, res, next) => {
+app.post(basePath + "/login", (req, res, next) => {
   passport.authenticate("local", (err, user, info) => {
     if (err) console.log(err);
     if (info) console.log(info);
@@ -147,14 +148,14 @@ app.post("/login", (req, res, next) => {
   })(req, res, next);
 });
 
-app.get("/logout", function (req, res) {
+app.get(basePath + "/logout", function (req, res) {
   req.logout();
   res.send({
     status: "logged-out",
   });
 });
 
-app.post("/register", (req, res, next) => {
+app.post(basePath + "/register", (req, res, next) => {
   var query = {
     firstname: req.body.firstname,
     lastname: req.body.lastname,
@@ -172,11 +173,11 @@ app.post("/register", (req, res, next) => {
 
 /// ROUTING
 
-app.get("/levsha-api/ping", function (req, res) {
+app.get(basePath + "/ping", function (req, res) {
   return res.send("pong");
 });
 
-app.get("/city", function (req, res) {
+app.get(basePath + "/city", function (req, res) {
   connection.query("select * from city", function (err, result) {
     if (err) return res.send(err);
 
@@ -184,7 +185,7 @@ app.get("/city", function (req, res) {
   });
 });
 
-app.get("/city/:city_id/locations", function (req, res) {
+app.get(basePath + "/city/:city_id/locations", function (req, res) {
   const sql = sqlString.format(
     "select * from location where city_id = ?",
     req.params.city_id
@@ -196,7 +197,7 @@ app.get("/city/:city_id/locations", function (req, res) {
   });
 });
 
-app.get("/category", function (req, res) {
+app.get(basePath + "/category", function (req, res) {
   connection.query("select * from category order by sorting", function (
     err,
     result
@@ -207,7 +208,7 @@ app.get("/category", function (req, res) {
   });
 });
 
-app.get("/user", checkAuthentication, function (req, res) {
+app.get(basePath + "/user", checkAuthentication, function (req, res) {
   const sql = sqlString.format(
     "select id, photo_link, phone, firstname, lastname, secondname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed from user where id = ? LIMIT 1",
     req.session.passport.user
@@ -220,7 +221,7 @@ app.get("/user", checkAuthentication, function (req, res) {
   });
 });
 
-app.get("/user/:userID", function (req, res) {
+app.get(basePath + "/user/:userID", function (req, res) {
   const sql = sqlString.format(
     "select id, photo_link, phone, firstname, lastname, surname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile from user where id = ? AND is_deleted = 0 LIMIT 1",
     req.params.userID
@@ -232,7 +233,7 @@ app.get("/user/:userID", function (req, res) {
   });
 });
 
-app.get("/", function (req, res) {
+app.get(basePath + "/", function (req, res) {
   res.redirect(productionHomeURL);
 });
 
