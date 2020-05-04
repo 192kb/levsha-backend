@@ -178,7 +178,7 @@ app.get(basePath + "/ping", function (req, res) {
 });
 
 app.get(basePath + "/city", function (req, res) {
-  connection.query("select * from city", function (err, result) {
+  connection.query("select * from location_city where is_deleted = 0", function (err, result) {
     if (err) return res.send(err);
 
     return res.send(result);
