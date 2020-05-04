@@ -15,7 +15,8 @@
     "uuid": "^8.0.0"
   },
   "scripts": {
-    "start": "nodemon --ignore sessions/ server.js"
+    "start": "node server.js",
+    "start-watch": "nodemon --ignore sessions/ server.js"
   },
   "devDependencies": {
     "nodemon": "^2.0.3"
