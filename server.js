@@ -93,6 +93,9 @@ passport.use(
         'select uuid, city_id from user where phone = ? and password_hash = ? and is_deleted = 0 limit 1',
         [phone, passwordHash]
       );
+
+console.log(sql);
+
       connection.query(sql, function (err, users) {
         if (err) return done(err);
         if (!users[0]) {
