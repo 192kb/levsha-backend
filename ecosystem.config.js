@@ -16,7 +16,7 @@ module.exports = {
       env_production: {
         NODE_ENV: 'production',
       },
-      ignore_watch: ['[/\\]./', 'node_modules', 'sessions'],
+      ignore_watch: ['[/\\]./', 'node_modules', 'sessions', '.git'],
     },
   ],
 

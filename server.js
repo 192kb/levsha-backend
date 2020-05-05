@@ -90,7 +90,7 @@ passport.use(
     (phone, password, done) => {
       const passwordHash = passwordHashFunction(password);
       const sql = sqlString.format(
-        'select id, city_id from user where phone = ? and password_hash = ? and is_deleted = 0 limit 1',
+        'select uuid, city_id from user where phone = ? and password_hash = ? and is_deleted = 0 limit 1',
         [phone, passwordHash]
       );
       connection.query(sql, function (err, users) {
