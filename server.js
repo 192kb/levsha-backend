@@ -55,7 +55,7 @@ app.use(
 
 /// CORS
 
-app.use(function (req, res, next) {
+app.use((req, res, next) => {
   if (!allowedOrigins.includes(req.headers.origin)) {
     next();
     return;
@@ -90,13 +90,11 @@ passport.use(
     (phone, password, done) => {
       const passwordHash = passwordHashFunction(password);
       const sql = sqlString.format(
-        'select uuid, city_id from user where phone = ? and password_hash = ? and is_deleted = 0 limit 1',
+        'select uuid, photo_link, phone, firstname, lastname, secondname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where phone = ? and password_hash = ? and is_deleted = 0 limit 1',
         [phone, passwordHash]
       );
 
-console.log(sql);
-
-      connection.query(sql, function (err, users) {
+      connection.query(sql, (err, users) => {
         if (err) return done(err);
         if (!users[0]) {
           return done(null, false);
@@ -113,12 +111,12 @@ passport.serializeUser((user, done) => {
   done(null, user.uuid);
 });
 
-passport.deserializeUser(function (userID, done) {
+passport.deserializeUser((userID, done) => {
   const sql = sqlString.format(
     'select * from user where uuid = ? limit 1',
     userID
   );
-  connection.query(sql, function (err, users) {
+  connection.query(sql, (err, users) => {
     if (err) return done(err);
     done(null, users[0]);
   });
@@ -130,21 +128,14 @@ app.post(basePath + '/user/login', (req, res, next) => {
     if (info) console.log(info);
 
     req.login(user, (err) => {
-      if (err || !user)
-        return res.send({
-          success: false,
-          error: info,
-        });
+      if (err || !user) return res.status(400).send(info);
 
-      return res.send({
-        success: true,
-        user: user,
-      });
+      return res.send(user);
     });
   })(req, res, next);
 });
 
-app.get(basePath + '/user/logout', function (req, res) {
+app.get(basePath + '/user/logout', (req, res) => {
   req.logout();
   res.send({
     status: 'logged-out',
@@ -162,7 +153,7 @@ app.post(basePath + '/user', (req, res, next) => {
     city_id: req.body.city_id,
   };
   var sql = sqlString.format('insert into user set ?', query);
-  connection.query(sql, function (err, result) {
+  connection.query(sql, (err, result) => {
     if (err)
       return res.status(400).send({
         code: err.errno,
@@ -176,14 +167,14 @@ app.post(basePath + '/user', (req, res, next) => {
 
 /// ROUTING
 
-app.get(basePath + '/ping', function (req, res) {
+app.get(basePath + '/ping', (req, res) => {
   return res.send('pong');
 });
 
-app.get(basePath + '/city', function (req, res) {
+app.get(basePath + '/city', (req, res) => {
   connection.query(
     'select * from location_city where is_deleted = 0',
-    function (err, result) {
+    (err, result) => {
       if (err)
         return res.status(400).send({
           code: err.errno,
@@ -196,36 +187,33 @@ app.get(basePath + '/city', function (req, res) {
   );
 });
 
-app.get(basePath + '/city/:city_id/locations', function (req, res) {
+app.get(basePath + '/city/:city_id/locations', (req, res) => {
   const sql = sqlString.format(
     'select * from location where city_id = ?',
     req.params.city_id
   );
-  connection.query(sql, function (err, result) {
+  connection.query(sql, (err, result) => {
     if (err) return res.send(err);
 
     return res.send(result);
   });
 });
 
-app.get(basePath + '/category', function (req, res) {
-  connection.query('select * from category order by sorting', function (
-    err,
-    result
-  ) {
+app.get(basePath + '/category', (req, res) => {
+  connection.query('select * from category order by sorting', (err, result) => {
     if (err) return res.send(err);
 
     return res.send(result);
   });
 });
 
-app.get(basePath + '/user', checkAuthentication, function (req, res) {
+app.get(basePath + '/user', checkAuthentication, (req, res) => {
   const sql = sqlString.format(
     'select uuid, photo_link, phone, firstname, lastname, secondname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
     req.session.passport.user
   );
 
-  connection.query(sql, function (err, result) {
+  connection.query(sql, (err, result) => {
     if (err) return res.status(400).send(err);
 
     let user = result[0];
@@ -235,7 +223,7 @@ app.get(basePath + '/user', checkAuthentication, function (req, res) {
       user.city_id
     );
 
-    connection.query(city_sql, function (err, result) {
+    connection.query(city_sql, (err, result) => {
       if (err) return res.status(400).send(err);
 
       user.city = result[0];
@@ -244,7 +232,7 @@ app.get(basePath + '/user', checkAuthentication, function (req, res) {
   });
 });
 
-function checkAuthentication(req, res, next) {
+const checkAuthentication = (req, res, next) => {
   if (req.isAuthenticated()) {
     next();
   } else {
@@ -252,7 +240,7 @@ function checkAuthentication(req, res, next) {
       status: 'no-auth',
     });
   }
-}
+};
 
 /// APPLICATION AVALIBILITY
 
