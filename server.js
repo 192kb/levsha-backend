@@ -207,6 +207,16 @@ app.get(basePath + '/category', (req, res) => {
   });
 });
 
+const checkAuthentication = (req, res, next) => {
+  if (req.isAuthenticated()) {
+    next();
+  } else {
+    res.status(401).send({
+      status: 'no-auth',
+    });
+  }
+};
+
 app.get(basePath + '/user', checkAuthentication, (req, res) => {
   const sql = sqlString.format(
     'select uuid, photo_link, phone, firstname, lastname, secondname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
@@ -231,16 +241,6 @@ app.get(basePath + '/user', checkAuthentication, (req, res) => {
     });
   });
 });
-
-const checkAuthentication = (req, res, next) => {
-  if (req.isAuthenticated()) {
-    next();
-  } else {
-    res.status(401).send({
-      status: 'no-auth',
-    });
-  }
-};
 
 /// APPLICATION AVALIBILITY
 
