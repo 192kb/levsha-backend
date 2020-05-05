@@ -166,7 +166,11 @@ app.post(basePath + "/user", (req, res, next) => {
   };
   var sql = sqlString.format("insert into user set ?", query);
   connection.query(sql, function (err, result) {
-    if (err) return res.send(err);
+    if (err) return res.status(400).send({
+      code: err.errno,
+      type: err.code,
+      message: err.sqlMessage
+    });
 
     return res.send(result);
   });
@@ -180,7 +184,11 @@ app.get(basePath + "/ping", function (req, res) {
 
 app.get(basePath + "/city", function (req, res) {
   connection.query("select * from location_city where is_deleted = 0", function (err, result) {
-    if (err) return res.send(err);
+    if (err) return res.status(400).send({
+      code: err.errno,
+      type: err.code,
+      message: err.sqlMessage
+    });
 
     return res.send(result);
   });
