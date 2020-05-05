@@ -1,23 +1,16 @@
-const express = require("express");
-const bodyParser = require("body-parser");
+const express = require('express');
+const bodyParser = require('body-parser');
 const app = express();
-const mysql = require("mysql");
-const {
-  v4: uuidv4
-} = require('uuid');
-const session = require("express-session");
-const FileStore = require("session-file-store")(session);
-const passport = require("passport");
-const LocalStrategy = require("passport-local").Strategy;
-const sqlString = require("sqlstring");
+const mysql = require('mysql');
+const { v4: uuidv4 } = require('uuid');
+const session = require('express-session');
+const FileStore = require('session-file-store')(session);
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const sqlString = require('sqlstring');
 
-const {
-  credetials
-} = require("./credentials/db");
-const {
-  sessionSecret,
-  passwordHashFunction
-} = require("./credentials/salt");
+const { credetials } = require('./credentials/db');
+const { sessionSecret, passwordHashFunction } = require('./credentials/salt');
 const {
   basePath,
   serverPort,
@@ -25,7 +18,7 @@ const {
   cookieMaxAge,
   serverApi,
   productionHomeURL,
-} = require("./configuration");
+} = require('./configuration');
 
 const connection = mysql.createConnection({
   host: credetials.host,
@@ -67,12 +60,12 @@ app.use(function (req, res, next) {
     next();
     return;
   }
-  res.header("Access-Control-Allow-Origin", req.headers.origin);
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
   res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept"
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept'
   );
-  res.header("Access-Control-Allow-Credentials", true);
+  res.header('Access-Control-Allow-Credentials', true);
   next();
 });
 
@@ -88,15 +81,16 @@ app.use(
 );
 
 passport.use(
-  new LocalStrategy({
-      usernameField: "phone",
-      passwordField: "password",
+  new LocalStrategy(
+    {
+      usernameField: 'phone',
+      passwordField: 'password',
       session: true,
     },
     (phone, password, done) => {
       const passwordHash = passwordHashFunction(password);
       const sql = sqlString.format(
-        "select id, city_id from user where phone = ? and password_hash = ? and is_deleted = 0 limit 1",
+        'select id, city_id from user where phone = ? and password_hash = ? and is_deleted = 0 limit 1',
         [phone, passwordHash]
       );
       connection.query(sql, function (err, users) {
@@ -118,7 +112,7 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(function (userID, done) {
   const sql = sqlString.format(
-    "select * from user where id = ? limit 1",
+    'select * from user where uuid = ? limit 1',
     userID
   );
   connection.query(sql, function (err, users) {
@@ -127,8 +121,8 @@ passport.deserializeUser(function (userID, done) {
   });
 });
 
-app.post(basePath + "/user/login", (req, res, next) => {
-  passport.authenticate("local", (err, user, info) => {
+app.post(basePath + '/user/login', (req, res, next) => {
+  passport.authenticate('local', (err, user, info) => {
     if (err) console.log(err);
     if (info) console.log(info);
 
@@ -147,14 +141,14 @@ app.post(basePath + "/user/login", (req, res, next) => {
   })(req, res, next);
 });
 
-app.get(basePath + "/user/logout", function (req, res) {
+app.get(basePath + '/user/logout', function (req, res) {
   req.logout();
   res.send({
-    status: "logged-out",
+    status: 'logged-out',
   });
 });
 
-app.post(basePath + "/user", (req, res, next) => {
+app.post(basePath + '/user', (req, res, next) => {
   var query = {
     uuid: uuidv4(),
     firstname: req.body.firstname,
@@ -164,13 +158,14 @@ app.post(basePath + "/user", (req, res, next) => {
     password_hash: passwordHashFunction(req.body.password),
     city_id: req.body.city_id,
   };
-  var sql = sqlString.format("insert into user set ?", query);
+  var sql = sqlString.format('insert into user set ?', query);
   connection.query(sql, function (err, result) {
-    if (err) return res.status(400).send({
-      code: err.errno,
-      type: err.code,
-      message: err.sqlMessage
-    });
+    if (err)
+      return res.status(400).send({
+        code: err.errno,
+        type: err.code,
+        message: err.sqlMessage,
+      });
 
     return res.send(result);
   });
@@ -178,25 +173,29 @@ app.post(basePath + "/user", (req, res, next) => {
 
 /// ROUTING
 
-app.get(basePath + "/ping", function (req, res) {
-  return res.send("pong");
+app.get(basePath + '/ping', function (req, res) {
+  return res.send('pong');
 });
 
-app.get(basePath + "/city", function (req, res) {
-  connection.query("select * from location_city where is_deleted = 0", function (err, result) {
-    if (err) return res.status(400).send({
-      code: err.errno,
-      type: err.code,
-      message: err.sqlMessage
-    });
+app.get(basePath + '/city', function (req, res) {
+  connection.query(
+    'select * from location_city where is_deleted = 0',
+    function (err, result) {
+      if (err)
+        return res.status(400).send({
+          code: err.errno,
+          type: err.code,
+          message: err.sqlMessage,
+        });
 
-    return res.send(result);
-  });
+      return res.send(result);
+    }
+  );
 });
 
-app.get(basePath + "/city/:city_id/locations", function (req, res) {
+app.get(basePath + '/city/:city_id/locations', function (req, res) {
   const sql = sqlString.format(
-    "select * from location where city_id = ?",
+    'select * from location where city_id = ?',
     req.params.city_id
   );
   connection.query(sql, function (err, result) {
@@ -206,8 +205,8 @@ app.get(basePath + "/city/:city_id/locations", function (req, res) {
   });
 });
 
-app.get(basePath + "/category", function (req, res) {
-  connection.query("select * from category order by sorting", function (
+app.get(basePath + '/category', function (req, res) {
+  connection.query('select * from category order by sorting', function (
     err,
     result
   ) {
@@ -217,22 +216,34 @@ app.get(basePath + "/category", function (req, res) {
   });
 });
 
-app.get(basePath + "/user", checkAuthentication, function (req, res) {
+app.get(basePath + '/user', checkAuthentication, function (req, res) {
   const sql = sqlString.format(
-    "select id, photo_link, phone, firstname, lastname, secondname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed from user where id = ? LIMIT 1",
+    'select uuid, photo_link, phone, firstname, lastname, secondname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
     req.session.passport.user
   );
 
   connection.query(sql, function (err, result) {
-    if (err) return res.send(err);
+    if (err) return res.status(400).send(err);
 
-    return res.send(result[0]);
+    let user = result[0];
+
+    const city_sql = sqlString.format(
+      'select * from location_city where is_deleted = 0 and id = ?',
+      user.city_id
+    );
+
+    connection.query(city_sql, function (err, result) {
+      if (err) return res.status(400).send(err);
+
+      user.city = result[0];
+      return res.send(user);
+    });
   });
 });
 
-app.get(basePath + "/user/:userID", function (req, res) {
+app.get(basePath + '/user/:userID', function (req, res) {
   const sql = sqlString.format(
-    "select id, photo_link, phone, firstname, lastname, surname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile from user where id = ? AND is_deleted = 0 LIMIT 1",
+    'select id, photo_link, phone, firstname, lastname, surname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile from user where id = ? AND is_deleted = 0 LIMIT 1',
     req.params.userID
   );
   connection.query(sql, function (err, result) {
@@ -242,7 +253,7 @@ app.get(basePath + "/user/:userID", function (req, res) {
   });
 });
 
-app.get(basePath + "/", function (req, res) {
+app.get(basePath + '/', function (req, res) {
   res.redirect(productionHomeURL);
 });
 
@@ -251,7 +262,7 @@ function checkAuthentication(req, res, next) {
     next();
   } else {
     res.status(401).send({
-      status: "no-auth",
+      status: 'no-auth',
     });
   }
 }
@@ -259,6 +270,6 @@ function checkAuthentication(req, res, next) {
 /// APPLICATION AVALIBILITY
 
 app.listen(serverPort, () => {
-  console.log("Listening on localhost: " + serverPort);
-  console.log("A api now available at " + serverApi);
+  console.log('Listening on localhost: ' + serverPort);
+  console.log('A api now available at ' + serverApi);
 });
