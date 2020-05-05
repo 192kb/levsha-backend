@@ -90,7 +90,7 @@ passport.use(
     (phone, password, done) => {
       const passwordHash = passwordHashFunction(password);
       const sql = sqlString.format(
-        'select uuid, photo_link, phone, firstname, lastname, secondname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where phone = ? and password_hash = ? and is_deleted = 0 limit 1',
+        'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where phone = ? and password_hash = ? and is_deleted = 0 limit 1',
         [phone, passwordHash]
       );
 
@@ -219,7 +219,7 @@ const checkAuthentication = (req, res, next) => {
 
 app.get(basePath + '/user', checkAuthentication, (req, res) => {
   const sql = sqlString.format(
-    'select uuid, photo_link, phone, firstname, lastname, secondname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
+    'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
     req.session.passport.user
   );
 
