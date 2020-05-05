@@ -241,22 +241,6 @@ app.get(basePath + '/user', checkAuthentication, function (req, res) {
   });
 });
 
-app.get(basePath + '/user/:userID', function (req, res) {
-  const sql = sqlString.format(
-    'select id, photo_link, phone, firstname, lastname, surname, vk_profile, ok_profile, fb_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile from user where id = ? AND is_deleted = 0 LIMIT 1',
-    req.params.userID
-  );
-  connection.query(sql, function (err, result) {
-    if (err) return res.send(err);
-
-    return res.send(result);
-  });
-});
-
-app.get(basePath + '/', function (req, res) {
-  res.redirect(productionHomeURL);
-});
-
 function checkAuthentication(req, res, next) {
   if (req.isAuthenticated()) {
     next();
