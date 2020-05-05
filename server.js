@@ -100,7 +100,19 @@ passport.use(
           return done(null, false);
         }
 
-        return done(null, users[0]);
+        const user = users[0];
+
+        const city_sql = sqlString.format(
+          'select * from location_city where is_deleted = 0 and id = ?',
+          user.city_id
+        );
+
+        connection.query(city_sql, (err, result) => {
+          if (err) return done(err);
+
+          user.city = result[0];
+          return done(null, user);
+        });
       });
     }
   )
@@ -111,10 +123,10 @@ passport.serializeUser((user, done) => {
   done(null, user.uuid);
 });
 
-passport.deserializeUser((userID, done) => {
+passport.deserializeUser((uuid, done) => {
   const sql = sqlString.format(
     'select * from user where uuid = ? limit 1',
-    userID
+    uuid
   );
   connection.query(sql, (err, users) => {
     if (err) return done(err);
@@ -150,7 +162,7 @@ app.post(basePath + '/user', (req, res, next) => {
     lastname: req.body.lastname,
     phone: req.body.phone,
     password_hash: passwordHashFunction(req.body.password),
-    city_id: req.body.city_id,
+    city_id: req.body.city.id,
   };
   var sql = sqlString.format('insert into user set ?', query);
   connection.query(sql, (err, result) => {
