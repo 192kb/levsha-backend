@@ -154,7 +154,7 @@ app.get(basePath + "/user/logout", function (req, res) {
   });
 });
 
-app.post(basePath + "/user/signup", (req, res, next) => {
+app.post(basePath + "/user", (req, res, next) => {
   var query = {
     uuid: uuidv4(),
     firstname: req.body.firstname,
