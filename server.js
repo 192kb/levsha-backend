@@ -47,6 +47,8 @@ app.use(session({
   cookie: {
     httpOnly: false,
     domain: '.192kb.ru',
+    expires: new Date() + 26 * 60 * 60 * 1000,
+    maxAge: 26 * 60 * 60 * 1000,
     sameSite: "none"
   }
 }));
