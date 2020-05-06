@@ -41,14 +41,19 @@ app.use(bodyParser.urlencoded({
 
 app.use(passport.initialize());
 app.use(session({
+  store: new FileStore({
+    ttl: cookieMaxAge,
+    reapAsync: true,
+    reapSyncFallback: true
+  }),
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: false,
     domain: '.192kb.ru',
-    expires: new Date() + 26 * 60 * 60 * 1000,
-    maxAge: 26 * 60 * 60 * 1000,
+    expires: new Date() + cookieMaxAge,
+    maxAge: cookieMaxAge,
     secure: false,
     sameSite: "none"
   }
