@@ -41,7 +41,7 @@ app.use(bodyParser.urlencoded({
 
 app.use(passport.initialize());
 app.use(
-  passport.session({
+  session({
     cookie: {
       httpOnly: false,
       maxAge: cookieMaxAge,
@@ -53,7 +53,6 @@ app.use(
     store: new FileStore(),
     secret: sessionSecret,
     resave: false,
-    secure: true,
     saveUninitialized: false,
     unset: 'destroy',
   })
