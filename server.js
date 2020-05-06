@@ -149,7 +149,7 @@ app.get(basePath + '/user/logout', (req, res) => {
     if (err) {
       console.error(err);
     } else {
-      res.clearCookie(options.name);
+      res.clearCookie('connect.sid');
       res.send({
         status: 'logged-out',
       });
@@ -188,7 +188,7 @@ const checkAuthentication = (req, res, next) => {
     res.status(401).send({
       status: 'no-auth',
       session: req.session,
-      pasport: req.session.passport
+      pasport: req.session.passport,
     });
   }
 };
