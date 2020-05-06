@@ -40,7 +40,7 @@ app.use(
     cookie: {
       httpOnly: false,
       maxAge: cookieMaxAge,
-      domain: '192kb.ru',
+      domain: '.192kb.ru',
     },
     genid: () => {
       return uuidv4(); // use UUIDs for session IDs
