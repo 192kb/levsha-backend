@@ -41,11 +41,10 @@ app.use(bodyParser.urlencoded({
 
 app.use(passport.initialize());
 app.use(
-  session({
+  passport.session({
     cookie: {
       httpOnly: false,
-      domain: '.192kb.ru',
-      secure: true
+      domain: '.192kb.ru'
     },
     genid: () => {
       return uuidv4(); // use UUIDs for session IDs
