@@ -37,6 +37,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(
   session({
+    cookie: {
+      httpOnly: false,
+      maxAge: cookieMaxAge,
+      domain: '192kb.ru',
+    },
     genid: () => {
       return uuidv4(); // use UUIDs for session IDs
     },
@@ -44,7 +49,8 @@ app.use(
     secret: sessionSecret,
     resave: false,
     secure: true,
-    saveUninitialized: true,
+    saveUninitialized: false,
+    unset: 'destroy',
   })
 );
 
