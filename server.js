@@ -43,7 +43,11 @@ app.use(passport.initialize());
 app.use(session({
   secret: sessionSecret,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: false,
+    secure: true,
+  }
 }));
 
 /// CORS
