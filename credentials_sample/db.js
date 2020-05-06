@@ -1,8 +1,8 @@
 module.exports = {
-  credetials: {
-    host     : 'localhost',
-    user     : 'user',
-    password : 'password',
-    database : 'database_name'
+  credentials: {
+    host: 'localhost',
+    user: 'user',
+    password: 'password',
+    database: 'database_name'
   }
 }

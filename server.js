@@ -2,15 +2,22 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
 const mysql = require('mysql');
-const { v4: uuidv4 } = require('uuid');
+const {
+  v4: uuidv4
+} = require('uuid');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const sqlString = require('sqlstring');
 
-const { credetials } = require('./credentials/db');
-const { sessionSecret, passwordHashFunction } = require('./credentials/salt');
+const {
+  credentials
+} = require('./credentials/db');
+const {
+  sessionSecret,
+  passwordHashFunction
+} = require('./credentials/salt');
 const {
   basePath,
   serverPort,
@@ -19,24 +26,22 @@ const {
   serverApi,
 } = require('./configuration');
 
-const connection = mysql.createConnection({
-  host: credetials.host,
-  user: credetials.user,
-  password: credetials.password,
-  database: credetials.database,
-});
+const connection = mysql.createConnection(credentials);
 connection.connect();
 
 // parse application/json
 app.use(bodyParser.json());
 
 // parse application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({
+  extended: true
+}));
 
 /// SESSION
 
+app.use(passport.initialize());
 app.use(
-  session({
+  passport.session({
     cookie: {
       httpOnly: false,
       maxAge: cookieMaxAge,
@@ -72,18 +77,8 @@ app.use((req, res, next) => {
 
 /// AUTH
 
-app.use(passport.initialize());
-app.use(
-  passport.session({
-    cookie: {
-      maxAge: cookieMaxAge,
-    },
-  })
-);
-
 passport.use(
-  new LocalStrategy(
-    {
+  new LocalStrategy({
       usernameField: 'phone',
       passwordField: 'password',
       session: true,
