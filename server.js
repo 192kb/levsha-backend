@@ -182,11 +182,13 @@ app.post(basePath + '/user', (req, res, next) => {
 
 const checkAuthentication = (req, res, next) => {
   console.log(req.sessionID);
-  if (req.session.passport.user) {
+  if (req.isAuthenticated()) {
     next();
   } else {
     res.status(401).send({
       status: 'no-auth',
+      req: req,
+      isAuth: req.isAuthenticated(),
       session: req.session,
       pasport: req.session.passport,
     });
