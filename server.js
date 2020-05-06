@@ -46,7 +46,6 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: false,
-    secure: true,
   }
 }));
 
@@ -123,9 +122,6 @@ passport.deserializeUser((uuid, done) => {
 
 app.post(basePath + '/user/login', (req, res, next) => {
   passport.authenticate('local', (err, user, info) => {
-    if (err) console.log(err);
-    if (info) console.log(info);
-
     req.login(user, (err) => {
       if (err || !user)
         return res.status(401).send({
@@ -170,7 +166,6 @@ app.post(basePath + '/user', (req, res, next) => {
 });
 
 const checkAuthentication = (req, res, next) => {
-  console.log(req);
   if (req.isAuthenticated()) {
     next();
   } else {
@@ -250,6 +245,6 @@ app.get(basePath + '/category', (req, res) => {
 /// APPLICATION AVALIBILITY
 
 app.listen(serverPort, () => {
-  console.log('Listening on localhost: ' + serverPort);
-  console.log('A api now available at ' + serverApi);
+  console.info('Listening on localhost: ' + serverPort);
+  console.info('A api now available at ' + serverApi);
 });
