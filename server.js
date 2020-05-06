@@ -46,6 +46,9 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: false,
+    domain: '.192kb.ru',
+    secure: true,
+    sameSite: "none"
   }
 }));
 
