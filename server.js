@@ -2,22 +2,15 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
 const mysql = require('mysql');
-const {
-  v4: uuidv4
-} = require('uuid');
+const { v4: uuidv4 } = require('uuid');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const sqlString = require('sqlstring');
 
-const {
-  credentials
-} = require('./credentials/db');
-const {
-  sessionSecret,
-  passwordHashFunction
-} = require('./credentials/salt');
+const { credentials } = require('./credentials/db');
+const { sessionSecret, passwordHashFunction } = require('./credentials/salt');
 const {
   basePath,
   serverPort,
@@ -33,31 +26,35 @@ connection.connect();
 app.use(bodyParser.json());
 
 // parse application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({
-  extended: true
-}));
+app.use(
+  bodyParser.urlencoded({
+    extended: true,
+  })
+);
 
 /// SESSION
 
 app.use(passport.initialize());
-app.use(session({
-  store: new FileStore({
-    ttl: cookieMaxAge,
-    reapAsync: true,
-    reapSyncFallback: true
-  }),
-  secret: sessionSecret,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: false,
-    domain: '.192kb.ru',
-    expires: new Date() + cookieMaxAge,
-    maxAge: cookieMaxAge,
-    secure: false,
-    sameSite: "none"
-  }
-}));
+app.use(
+  session({
+    store: new FileStore({
+      ttl: cookieMaxAge,
+      reapAsync: true,
+      reapSyncFallback: true,
+    }),
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: false,
+      domain: '.192kb.ru',
+      expires: new Date() + cookieMaxAge,
+      maxAge: cookieMaxAge,
+      secure: false,
+      sameSite: 'none',
+    },
+  })
+);
 
 /// CORS
 
@@ -78,7 +75,8 @@ app.use((req, res, next) => {
 /// AUTH
 
 passport.use(
-  new LocalStrategy({
+  new LocalStrategy(
+    {
       usernameField: 'phone',
       passwordField: 'password',
       session: true,
@@ -181,41 +179,35 @@ app.post(basePath + '/user', (req, res, next) => {
   });
 });
 
-const checkAuthentication = (req, res, next) => {
-  console.log(req.sessionID);
-  if (req.isAuthenticated()) {
-    next();
-  } else {
-    res.status(401).send({
-      status: 'no-auth',
-    });
-  }
-};
-
-app.get(basePath + '/user', checkAuthentication, (req, res) => {
-  const sql = sqlString.format(
-    'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ok_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
-    req.session.passport.user
-  );
-
-  connection.query(sql, (err, result) => {
-    if (err) return res.status(401).send(err);
-
-    let user = result[0];
-
-    const city_sql = sqlString.format(
-      'select * from location_city where is_deleted = 0 and id = ?',
-      user.city_id
+app.get(
+  basePath + '/user',
+  require('connect-ensure-login').ensureLoggedIn(),
+  (req, res) => {
+    console.log(req.user);
+    const sql = sqlString.format(
+      'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ok_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
+      req.user
     );
 
-    connection.query(city_sql, (err, result) => {
-      if (err) return res.status(400).send(err);
+    connection.query(sql, (err, result) => {
+      if (err) return res.status(401).send(err);
 
-      user.city = result[0];
-      return res.send(user);
+      let user = result[0];
+
+      const city_sql = sqlString.format(
+        'select * from location_city where is_deleted = 0 and id = ?',
+        user.city_id
+      );
+
+      connection.query(city_sql, (err, result) => {
+        if (err) return res.status(400).send(err);
+
+        user.city = result[0];
+        return res.send(user);
+      });
     });
-  });
-});
+  }
+);
 
 /// ROUTING
 
