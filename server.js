@@ -146,9 +146,15 @@ app.post(basePath + '/user/login', (req, res, next) => {
 });
 
 app.get(basePath + '/user/logout', (req, res) => {
-  req.logout();
-  res.send({
-    status: 'logged-out',
+  req.session.destroy(function (err) {
+    if (err) {
+      console.error(err);
+    } else {
+      res.clearCookie(options.name);
+      res.send({
+        status: 'logged-out',
+      });
+    }
   });
 });
 
