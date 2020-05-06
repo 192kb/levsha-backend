@@ -17,7 +17,6 @@ const {
   allowedOrigins,
   cookieMaxAge,
   serverApi,
-  productionHomeURL,
 } = require('./configuration');
 
 const connection = mysql.createConnection({
@@ -32,11 +31,7 @@ connection.connect();
 app.use(bodyParser.json());
 
 // parse application/x-www-form-urlencoded
-app.use(
-  bodyParser.urlencoded({
-    extended: false,
-  })
-);
+app.use(bodyParser.urlencoded({ extended: true }));
 
 /// SESSION
 
@@ -140,7 +135,12 @@ app.post(basePath + '/user/login', (req, res, next) => {
     if (info) console.log(info);
 
     req.login(user, (err) => {
-      if (err || !user) return res.status(400).send(info);
+      if (err || !user)
+        return res.status(401).send({
+          code: 401,
+          type: 'AUTH_NOT_PASSED',
+          message: 'Неправильный логин / пароль',
+        });
 
       return res.send(user);
     });
@@ -174,6 +174,42 @@ app.post(basePath + '/user', (req, res, next) => {
       });
 
     return res.send(result);
+  });
+});
+
+const checkAuthentication = (req, res, next) => {
+  console.log(req);
+  if (req.isAuthenticated()) {
+    next();
+  } else {
+    res.status(401).send({
+      status: 'no-auth',
+    });
+  }
+};
+
+app.get(basePath + '/user', checkAuthentication, (req, res) => {
+  const sql = sqlString.format(
+    'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ok_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
+    req.session.passport.user
+  );
+
+  connection.query(sql, (err, result) => {
+    if (err) return res.status(401).send(err);
+
+    let user = result[0];
+
+    const city_sql = sqlString.format(
+      'select * from location_city where is_deleted = 0 and id = ?',
+      user.city_id
+    );
+
+    connection.query(city_sql, (err, result) => {
+      if (err) return res.status(400).send(err);
+
+      user.city = result[0];
+      return res.send(user);
+    });
   });
 });
 
@@ -216,41 +252,6 @@ app.get(basePath + '/category', (req, res) => {
     if (err) return res.send(err);
 
     return res.send(result);
-  });
-});
-
-const checkAuthentication = (req, res, next) => {
-  if (req.isAuthenticated()) {
-    next();
-  } else {
-    res.status(401).send({
-      status: 'no-auth',
-    });
-  }
-};
-
-app.get(basePath + '/user', checkAuthentication, (req, res) => {
-  const sql = sqlString.format(
-    'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ok_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
-    req.session.passport.user
-  );
-
-  connection.query(sql, (err, result) => {
-    if (err) return res.status(400).send(err);
-
-    let user = result[0];
-
-    const city_sql = sqlString.format(
-      'select * from location_city where is_deleted = 0 and id = ?',
-      user.city_id
-    );
-
-    connection.query(city_sql, (err, result) => {
-      if (err) return res.status(400).send(err);
-
-      user.city = result[0];
-      return res.send(user);
-    });
   });
 });
 
