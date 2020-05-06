@@ -179,35 +179,42 @@ app.post(basePath + '/user', (req, res, next) => {
   });
 });
 
-app.get(
-  basePath + '/user',
-  require('connect-ensure-login').ensureLoggedIn(),
-  (req, res) => {
-    console.log(req.user);
-    const sql = sqlString.format(
-      'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ok_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
-      req.user
-    );
-
-    connection.query(sql, (err, result) => {
-      if (err) return res.status(401).send(err);
-
-      let user = result[0];
-
-      const city_sql = sqlString.format(
-        'select * from location_city where is_deleted = 0 and id = ?',
-        user.city_id
-      );
-
-      connection.query(city_sql, (err, result) => {
-        if (err) return res.status(400).send(err);
-
-        user.city = result[0];
-        return res.send(user);
-      });
+const checkAuthentication = (req, res, next) => {
+  console.log(req.sessionID);
+  console.log(req.session.user);
+  if (req.session.user) {
+    next();
+  } else {
+    res.status(401).send({
+      status: 'no-auth',
     });
   }
-);
+};
+
+app.get(basePath + '/user', checkAuthentication, (req, res) => {
+  const sql = sqlString.format(
+    'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ok_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
+    req.session.passport.user
+  );
+
+  connection.query(sql, (err, result) => {
+    if (err) return res.status(401).send(err);
+
+    let user = result[0];
+
+    const city_sql = sqlString.format(
+      'select * from location_city where is_deleted = 0 and id = ?',
+      user.city_id
+    );
+
+    connection.query(city_sql, (err, result) => {
+      if (err) return res.status(400).send(err);
+
+      user.city = result[0];
+      return res.send(user);
+    });
+  });
+});
 
 /// ROUTING
 
