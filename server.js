@@ -35,6 +35,7 @@ app.use(
 /// SESSION
 
 app.use(passport.initialize());
+app.use(passport.session());
 app.use(
   session({
     store: new FileStore({
@@ -181,12 +182,13 @@ app.post(basePath + '/user', (req, res, next) => {
 
 const checkAuthentication = (req, res, next) => {
   console.log(req.sessionID);
-  console.log(req.session.user);
-  if (req.session.user) {
+  if (req.session.passport.user) {
     next();
   } else {
     res.status(401).send({
       status: 'no-auth',
+      session: req.session,
+      pasport: req.session.passport
     });
   }
 };
