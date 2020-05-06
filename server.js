@@ -183,10 +183,13 @@ app.post(basePath + '/user', (req, res, next) => {
 
 const checkAuthentication = (req, res, next) => {
   console.log(req.sessionID);
-  if (req.isAuthenticated()) {
+  if (req.session && req.session.passport && req.session.passport.user) {
     next();
   } else {
     res.status(401).send({
+      code: 401,
+      message: 'Вы не авторизованы',
+      type: 'NO_AUTH',
       status: 'no-auth',
       isAuth: req.isAuthenticated(),
       session: req.session,
