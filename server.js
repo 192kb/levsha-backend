@@ -145,6 +145,7 @@ app.post(basePath + '/user/login', (req, res, next) => {
 });
 
 app.get(basePath + '/user/logout', (req, res) => {
+  req.logout();
   req.session.destroy(function (err) {
     if (err) {
       console.error(err);
@@ -189,7 +190,7 @@ const checkAuthentication = (req, res, next) => {
       status: 'no-auth',
       isAuth: req.isAuthenticated(),
       session: req.session,
-      pasport: req.session.passport,
+      sessionID: req.sessionID,
     });
   }
 };
