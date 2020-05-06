@@ -49,6 +49,7 @@ app.use(session({
     domain: '.192kb.ru',
     expires: new Date() + 26 * 60 * 60 * 1000,
     maxAge: 26 * 60 * 60 * 1000,
+    secure: false,
     sameSite: "none"
   }
 }));
@@ -170,6 +171,7 @@ app.post(basePath + '/user', (req, res, next) => {
 });
 
 const checkAuthentication = (req, res, next) => {
+  console.log(req.sessionID);
   if (req.isAuthenticated()) {
     next();
   } else {
