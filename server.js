@@ -5,6 +5,7 @@ const mysql = require('mysql');
 const {
   v4: uuidv4
 } = require('uuid');
+const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
@@ -39,7 +40,7 @@ app.use(bodyParser.urlencoded({
 /// SESSION
 
 app.use(passport.initialize());
-app.use(require('express-session')({
+app.use(session({
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false
