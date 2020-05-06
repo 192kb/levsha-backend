@@ -182,7 +182,6 @@ app.post(basePath + '/user', (req, res, next) => {
 });
 
 const checkAuthentication = (req, res, next) => {
-  console.log(req.sessionID);
   if (req.session && req.session.passport && req.session.passport.user) {
     next();
   } else {
@@ -190,10 +189,6 @@ const checkAuthentication = (req, res, next) => {
       code: 401,
       message: 'Вы не авторизованы',
       type: 'NO_AUTH',
-      status: 'no-auth',
-      isAuth: req.isAuthenticated(),
-      session: req.session,
-      sessionID: req.sessionID,
     });
   }
 };
