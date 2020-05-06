@@ -44,8 +44,8 @@ app.use(
   session({
     cookie: {
       httpOnly: false,
-      maxAge: cookieMaxAge,
       domain: '.192kb.ru',
+      secure: true
     },
     genid: () => {
       return uuidv4(); // use UUIDs for session IDs
