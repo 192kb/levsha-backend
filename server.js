@@ -27,7 +27,7 @@ connection.connect(function (err) {
     return;
   }
 
-  console.log('MySQL connected as id ' + connection.threadId);
+  console.info('MySQL connected as id ' + connection.threadId);
 });
 
 // parse application/json
@@ -156,7 +156,7 @@ app.get(basePath + '/user/logout', (req, res) => {
   req.logout();
   req.session.destroy(function (err) {
     if (err) {
-      console.error(err);
+      console.warn(err);
     } else {
       res.clearCookie('connect.sid');
       res.send({
@@ -301,9 +301,10 @@ app.get(basePath + '/task/', (req, res) => {
     });
 
     const userPromise = new Promise((resolve, reject) => {
-      const sql = sqlString.format('select * from user where uuid in (?)', [
-        userIds,
-      ]);
+      const sql = sqlString.format(
+        'select uuid, photo_url, phone, firstname, lastname, secondname, city_id from user where uuid in (?)',
+        [userIds]
+      );
 
       connection.query(sql, (err, result) => {
         if (err) reject(err);
@@ -322,7 +323,6 @@ app.get(basePath + '/task/', (req, res) => {
       connection.query(sql, (err, result) => {
         if (err) reject(err);
 
-        console.log(districtIds, sql, result);
         districts = result;
         resolve(result);
       });
@@ -364,7 +364,6 @@ app.get(basePath + '/task/', (req, res) => {
         );
       })
       .catch((err) => {
-        console.log(err);
         res.status(400).send({
           code: err.errno,
           type: err.code,
