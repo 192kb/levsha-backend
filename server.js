@@ -20,7 +20,15 @@ const {
 } = require('./configuration');
 
 const connection = mysql.createConnection(credentials);
-connection.connect();
+connection.connect(function (err) {
+  if (err) {
+    console.warn(err.stack);
+    console.warn('Check your /credentials/db.js');
+    return;
+  }
+
+  console.log('MySQL connected as id ' + connection.threadId);
+});
 
 // parse application/json
 app.use(bodyParser.json());
@@ -158,7 +166,7 @@ app.get(basePath + '/user/logout', (req, res) => {
   });
 });
 
-app.post(basePath + '/user', (req, res, next) => {
+app.put(basePath + '/user', (req, res, next) => {
   var query = {
     uuid: uuidv4(),
     firstname: req.body.firstname,
@@ -246,19 +254,52 @@ app.get(basePath + '/city/:city_id/locations', (req, res) => {
     req.params.city_id
   );
   connection.query(sql, (err, result) => {
-    if (err) return res.send(err);
+    if (err)
+      return res.status(400).send({
+        code: err.errno,
+        type: err.code,
+        message: err.sqlMessage,
+      });
 
     return res.send(result);
   });
 });
 
-app.get(basePath + '/category', (req, res) => {
-  connection.query('select * from category order by sorting', (err, result) => {
-    if (err) return res.send(err);
+app.get(basePath + '/task/', (req, res) => {
+  const sql = sqlString.format('select * from task limit 10');
+
+  connection.query(sql, (err, result) => {
+    if (err)
+      return res.status(400).send({
+        code: err.errno,
+        type: err.code,
+        message: err.sqlMessage,
+      });
 
     return res.send(result);
   });
 });
+
+app.put(basePath + '/task/', (req, res) => {});
+
+app.get(basePath + '/task/item/:task_id', (req, res) => {});
+
+app.post(basePath + '/task/item/:task_id', (req, res) => {});
+
+app.delete(basePath + '/task/item/:task_id', (req, res) => {});
+
+app.get(basePath + '/task/category', (req, res) => {
+  connection.query(
+    'select * from task_category order by sorting',
+    (err, result) => {
+      if (err) return res.send(err);
+
+      return res.send(result);
+    }
+  );
+});
+
+app.put(basePath + '/task/category', (req, res) => {});
 
 /// APPLICATION AVALIBILITY
 

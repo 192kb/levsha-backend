@@ -10,7 +10,8 @@ module.exports = {
     productionHomeURL: 'https://' + baseDomainName + basePath,
     minPassword_length: 4,
     allowedOrigins: [
-        'http://localhost:3000', 'https://dev.' + baseDomainName,
+        'http://localhost:3000',
+        'https://dev.' + baseDomainName,
         'https://' + baseDomainName
     ],
     cookieMaxAge: 3600000,
