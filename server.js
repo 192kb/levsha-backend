@@ -323,6 +323,7 @@ app.get(basePath + '/task/', (req, res) => {
       connection.query(sql, (err, result) => {
         if (err) reject(err);
 
+        console.log(districtIds, sql, result);
         districts = result;
         resolve(result);
       });
@@ -349,7 +350,6 @@ app.get(basePath + '/task/', (req, res) => {
       .then(() => {
         res.send(
           result.map((task) => {
-            console.log(users, districts, taskCategories, images);
             return {
               ...task,
               user: users.find((user) => user.uuid === task.user_id),
