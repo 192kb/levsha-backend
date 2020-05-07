@@ -335,7 +335,7 @@ app.get(basePath + '/task/', (req, res) => {
               ...task,
               user: users.find((user) => user.uuid === task.user_id),
               district: districts.find(
-                (district) => district.id === task.district_id
+                (district) => district.id === task.location_id
               ),
               category: taskCategories.find(
                 (category) => category.id === task.category_id
