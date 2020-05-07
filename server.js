@@ -332,7 +332,7 @@ app.get(basePath + '/task/', (req, res) => {
       (task) =>
         new Promise((resolve, reject) => {
           const sql = sqlString.format(
-            'select * from task_images where task_id = ? and is_deleted = false',
+            'select * from task_image where task_id = ? and is_deleted = 0',
             task.uuid
           );
 
