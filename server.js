@@ -267,7 +267,6 @@ app.get(basePath + '/city/:city_id/locations', (req, res) => {
 
 app.get(basePath + '/task/', (req, res) => {
   const sql = sqlString.format('select * from task limit 10');
-
   connection.query(sql, (err, result) => {
     if (err)
       return res.status(400).send({
@@ -276,7 +275,82 @@ app.get(basePath + '/task/', (req, res) => {
         message: err.sqlMessage,
       });
 
-    return res.send(result);
+    const taskCategoryIds = [
+      ...new Set(result.map((task) => task.category_id)),
+    ];
+    const userIds = [...new Set(result.map((task) => task.user_id))];
+    const districtIds = [...new Set(result.map((task) => task.location_id))];
+
+    let taskCategories = [];
+    let users = [];
+    let districts = [];
+
+    const taskPromise = new Promise((resolve, reject) => {
+      const sql = sqlString.format(
+        'select * from task_category where id in(?)',
+        taskCategoryIds
+      );
+
+      connection.query(sql, (err, result) => {
+        if (err) reject(err);
+
+        taskCategories = result;
+        resolve(result);
+      });
+    });
+
+    const userPromise = new Promise((resolve, reject) => {
+      const sql = sqlString.format(
+        'select * from user where uuid in (?)',
+        userIds
+      );
+
+      connection.query(sql, (err, result) => {
+        if (err) reject(err);
+
+        users = result;
+        resolve(result);
+      });
+    });
+
+    const districtPromise = new Promise((resolve, reject) => {
+      const sql = sqlString.format(
+        'select * from location_district where id in (?)',
+        districtIds
+      );
+
+      connection.query(sql, (err, result) => {
+        if (err) reject(err);
+
+        districts = result;
+        resolve(result);
+      });
+    });
+
+    Promise.all([taskPromise, userPromise, districtPromise])
+      .then(() => {
+        res.send(
+          result.map((task) => {
+            return {
+              ...task,
+              user: users.find((user) => user.uuid === task.user_id),
+              district: districts.find(
+                (district) => district.id === task.district_id
+              ),
+              category: taskCategories.find(
+                (category) => category.id === task.category_id
+              ),
+            };
+          })
+        );
+      })
+      .catch((err) =>
+        res.status(400).send({
+          code: err.errno,
+          type: err.code,
+          message: err.sqlMessage,
+        })
+      );
   });
 });
 
@@ -292,7 +366,12 @@ app.get(basePath + '/task/category', (req, res) => {
   connection.query(
     'select * from task_category order by sorting',
     (err, result) => {
-      if (err) return res.send(err);
+      if (err)
+        return res.status(400).send({
+          code: err.errno,
+          type: err.code,
+          message: err.sqlMessage,
+        });
 
       return res.send(result);
     }
