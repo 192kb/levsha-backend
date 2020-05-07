@@ -288,8 +288,8 @@ app.get(basePath + '/task/', (req, res) => {
 
     const taskPromise = new Promise((resolve, reject) => {
       const sql = sqlString.format(
-        'select * from task_category where id in(?)',
-        taskCategoryIds
+        'select * from task_category where id in(??)',
+        [taskCategoryIds]
       );
 
       connection.query(sql, (err, result) => {
@@ -301,10 +301,9 @@ app.get(basePath + '/task/', (req, res) => {
     });
 
     const userPromise = new Promise((resolve, reject) => {
-      const sql = sqlString.format(
-        'select * from user where uuid in (?)',
-        userIds
-      );
+      const sql = sqlString.format('select * from user where uuid in (??)', [
+        [userIds],
+      ]);
 
       connection.query(sql, (err, result) => {
         if (err) reject(err);
@@ -316,8 +315,8 @@ app.get(basePath + '/task/', (req, res) => {
 
     const districtPromise = new Promise((resolve, reject) => {
       const sql = sqlString.format(
-        'select * from location_district where id in (?)',
-        districtIds
+        'select * from location_district where id in (??)',
+        [districtIds]
       );
 
       connection.query(sql, (err, result) => {
