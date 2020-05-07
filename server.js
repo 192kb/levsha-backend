@@ -284,6 +284,7 @@ app.get(basePath + '/task/', (req, res) => {
     let taskCategories = [];
     let users = [];
     let districts = [];
+    let images = {};
 
     const taskPromise = new Promise((resolve, reject) => {
       const sql = sqlString.format(
@@ -327,10 +328,28 @@ app.get(basePath + '/task/', (req, res) => {
       });
     });
 
-    Promise.all([taskPromise, userPromise, districtPromise])
+    const imagePromises = result.map(
+      (task) =>
+        new Promise((resolve, reject) => {
+          const sql = sqlString.format(
+            'select * from task_images where task_id = ? and is_deleted = false',
+            task.uuid
+          );
+
+          connection.query(sql, (err, result) => {
+            if (err) reject(err);
+
+            images[task.uuid] = result;
+            resolve(result);
+          });
+        })
+    );
+
+    Promise.all([taskPromise, userPromise, districtPromise, ...imagePromises])
       .then(() => {
         res.send(
           result.map((task) => {
+            console.log(users, districts, taskCategories, images);
             return {
               ...task,
               user: users.find((user) => user.uuid === task.user_id),
@@ -340,6 +359,7 @@ app.get(basePath + '/task/', (req, res) => {
               category: taskCategories.find(
                 (category) => category.id === task.category_id
               ),
+              images: images[task.uuid],
             };
           })
         );
