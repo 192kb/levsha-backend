@@ -363,13 +363,14 @@ app.get(basePath + '/task/', (req, res) => {
           })
         );
       })
-      .catch((err) =>
+      .catch((err) => {
+        console.log(err);
         res.status(400).send({
           code: err.errno,
           type: err.code,
           message: err.sqlMessage,
-        })
-      );
+        });
+      });
   });
 });
 
