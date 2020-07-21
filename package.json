@@ -12,13 +12,13 @@
     "passport-local": "^1.0.0",
     "session-file-store": "^1.4.0",
     "sqlstring": "^2.3.2",
-    "uuid": "^8.0.0"
+    "uuid": "^8.2.0"
   },
   "scripts": {
     "start": "node server.js",
     "start-watch": "nodemon --ignore sessions/ server.js"
   },
   "devDependencies": {
-    "nodemon": "^2.0.3"
+    "nodemon": "^2.0.4"
   }
 }
