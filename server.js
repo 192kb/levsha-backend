@@ -248,7 +248,7 @@ app.get(basePath + '/city', (req, res) => {
   );
 });
 
-app.get(basePath + '/city/:city_id/locations', (req, res) => {
+app.get(basePath + '/city/:city_id/district', (req, res) => {
   const sql = sqlString.format(
     'select * from location where city_id = ?',
     req.params.city_id
