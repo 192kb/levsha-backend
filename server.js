@@ -250,7 +250,7 @@ app.get(basePath + '/city', (req, res) => {
 
 app.get(basePath + '/city/:city_id/district', (req, res) => {
   const sql = sqlString.format(
-    'select * from location where city_id = ?',
+    'select * from location_district where city_id = ?',
     req.params.city_id
   );
   connection.query(sql, (err, result) => {
