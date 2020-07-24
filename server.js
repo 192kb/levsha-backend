@@ -373,13 +373,104 @@ app.get(basePath + '/task/', (req, res) => {
   });
 });
 
-app.put(basePath + '/task/', (req, res) => {});
+app.put(basePath + '/task/', checkAuthentication, (req, res) => {});
 
-app.get(basePath + '/task/item/:task_id', (req, res) => {});
+app.put(basePath + '/task/image', checkAuthentication, (req, res) => {});
 
-app.post(basePath + '/task/item/:task_id', (req, res) => {});
+app.get(basePath + '/task/item/:task_id', (req, res) => {
+  const sql = sqlString.format(
+    'select * from task where uuid = ? limit 1',
+    req.params.task_id
+  );
+  connection.query(sql, (err, result) => {
+    if (err) {
+      return res.status(400).send({
+        code: err.errno,
+        type: err.code,
+        message: err.sqlMessage,
+      });
+    }
+    if (result[0]) {
+      const task = result[0];
 
-app.delete(basePath + '/task/item/:task_id', (req, res) => {});
+      const userPromise = new Promise((resolve, reject) => {
+        const sql = sqlString.format(
+          'select uuid, photo_url, phone, firstname, lastname, secondname, city_id from user where uuid = ? limit 1',
+          task.user_id
+        );
+
+        connection.query(sql, (err, result) => {
+          if (err) reject(err);
+          if (result) task.user = result[0];
+          resolve(result);
+        });
+      });
+
+      const imagePromise = new Promise((resolve, reject) => {
+        const sql = sqlString.format(
+          'select * from task_image where task_id = ? and is_deleted = 0 limit 3',
+          task.uuid
+        );
+
+        connection.query(sql, (err, result) => {
+          if (err) reject(err);
+          if (result) task.images = result;
+          resolve(result);
+        });
+      });
+
+      const categoryPromise = new Promise((resolve, reject) => {
+        const sql = sqlString.format(
+          'select * from task_category where id = ? limit 1',
+          task.category_id
+        );
+
+        connection.query(sql, (err, result) => {
+          if (err) reject(err);
+          if (result) task.category = result[0];
+          resolve(result);
+        });
+      });
+
+      const locationPromise = new Promise((resolve, reject) => {
+        const sql = sqlString.format(
+          'select * from location_district where id = ? limit 1',
+          task.location_id
+        );
+
+        connection.query(sql, (err, result) => {
+          if (err) reject(err);
+          if (result) task.location = result[0];
+          resolve(result);
+        });
+      });
+
+      Promise.all([locationPromise, userPromise, categoryPromise, imagePromise])
+        .then(() => res.send(task))
+        .catch((err) => {
+          res.status(400).send({
+            code: err.errno,
+            type: err.code,
+            message: err.sqlMessage,
+          });
+        });
+    } else {
+      res.send(404);
+    }
+  });
+});
+
+app.post(
+  basePath + '/task/item/:task_id',
+  checkAuthentication,
+  (req, res) => {}
+);
+
+app.delete(
+  basePath + '/task/item/:task_id',
+  checkAuthentication,
+  (req, res) => {}
+);
 
 app.get(basePath + '/task/category', (req, res) => {
   connection.query(
@@ -396,8 +487,6 @@ app.get(basePath + '/task/category', (req, res) => {
     }
   );
 });
-
-app.put(basePath + '/task/category', (req, res) => {});
 
 /// APPLICATION AVALIBILITY
 
