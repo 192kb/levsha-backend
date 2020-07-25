@@ -16,7 +16,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "start-watch": "nodemon --ignore sessions/ server.js"
+    "start-watch": "nodemon --ignore 'sessions/' --ignore 'upload/' server.js"
   },
   "devDependencies": {
     "nodemon": "^2.0.4"
