@@ -52,14 +52,14 @@ app.use(
       reapSyncFallback: true,
     }),
     secret: sessionSecret,
-    resave: false,
+    resave: true,
     saveUninitialized: false,
     cookie: {
       httpOnly: false,
       domain: '.192kb.ru',
       expires: new Date() + cookieMaxAge,
       maxAge: cookieMaxAge,
-      secure: false,
+      secure: true,
       sameSite: 'none',
     },
   })
@@ -375,7 +375,9 @@ app.get(basePath + '/task/', (req, res) => {
 
 app.put(basePath + '/task/', checkAuthentication, (req, res) => {});
 
-app.put(basePath + '/task/image', checkAuthentication, (req, res) => {});
+app.post(basePath + '/task/image', checkAuthentication, (req, res) => {
+  res.send(req);
+});
 
 app.get(basePath + '/task/item/:task_id', (req, res) => {
   const sql = sqlString.format(
