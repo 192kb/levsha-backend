@@ -20,6 +20,8 @@ const {
   allowedOrigins,
   cookieMaxAge,
   serverApi,
+  uploadsRelativePath,
+  uploadsPath,
 } = require('./configuration');
 
 const connection = mysql.createConnection(credentials);
@@ -53,20 +55,19 @@ app.use(passport.session());
 app.use(
   session({
     store: new FileStore({
-      path: '../sessions',
       ttl: cookieMaxAge,
       reapAsync: true,
       reapSyncFallback: true,
     }),
     secret: sessionSecret,
-    resave: true,
+    resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: false,
       domain: '.192kb.ru',
       expires: new Date() + cookieMaxAge,
       maxAge: cookieMaxAge,
-      secure: true,
+      secure: false,
       sameSite: 'none',
     },
   })
@@ -382,20 +383,41 @@ app.get(basePath + '/task/', (req, res) => {
   });
 });
 
-app.put(basePath + '/task/', checkAuthentication, (req, res) => {});
+app.put(basePath + '/task/', checkAuthentication, (req, res) => {
+  return res.send(req);
+});
 
 app.post(basePath + '/task/image', upload.single('taskImage'), (req, res) => {
-  var file = __dirname + '/upload/' + uuidv4() + '_' + req.file.originalname;
-  fs.rename(req.file.path, file, (err) => {
-    if (err) {
-      res.status(500).send(err);
-    } else {
-      res.json({
-        filename: req.file.filename,
-        file: req.file,
-      });
+  var fileName = uuidv4() + '.jpg';
+  fs.rename(
+    req.file.path,
+    uploadsPath + uploadsRelativePath + fileName,
+    (err) => {
+      if (err) {
+        res.status(500).send(err);
+      } else {
+        const query = {
+          uuid: uuidv4(),
+          task_id: null,
+          url: uploadsRelativePath + fileName,
+          // user_id: '600208f0-9442-4e2d-bbdf-c6d562e53d0f',
+          user_id: session.passport?.user,
+        };
+        const sql = sqlString.format('insert into task_image set ?', query);
+        connection.query(sql, (err, result) => {
+          if (err) {
+            return res.status(400).send({
+              code: err.errno,
+              type: err.code,
+              message: err.sqlMessage,
+            });
+          }
+
+          return res.json(query);
+        });
+      }
     }
-  });
+  );
 });
 
 app.get(basePath + '/task/item/:task_id', (req, res) => {
