@@ -85,6 +85,7 @@ app.use((req, res, next) => {
     'Access-Control-Allow-Headers',
     'Origin, X-Requested-With, Content-Type, Accept'
   );
+  res.header('Access-Control-Allow-Methods', 'PUT, POST, GET, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Credentials', true);
   next();
 });
@@ -383,8 +384,46 @@ app.get(basePath + '/task/', (req, res) => {
   });
 });
 
-app.put(basePath + '/task/', checkAuthentication, (req, res) => {
-  return res.send(req);
+app.put(basePath + '/task', (req, res) => {
+  const query = {
+    uuid: uuidv4(),
+    title: req.body.title,
+    description: req.body.description,
+    price: req.body.price,
+    category_id: req.body.category?.id,
+    location_id: req.body.district?.id,
+    user_id: req.session.passport?.user,
+  };
+  const sql = sqlString.format('insert into task set ?', query);
+  connection.query(sql, (err, result) => {
+    if (err) {
+      return res.status(400).send({
+        code: err.errno,
+        type: err.code,
+        message: err.sqlMessage,
+      });
+    }
+    const imageIds = req.body.images?.map((image) => image.uuid);
+    const imagesSql = sqlString.format(
+      'update task_image set task_id = ? where uuid in (?)',
+      [query.uuid, imageIds]
+    );
+    connection.query(imagesSql, (imagesErr) => {
+      if (imagesErr) {
+        return res.status(400).send({
+          code: imagesErr.errno,
+          type: imagesErr.code,
+          message: imagesErr.sqlMessage,
+          imageIds,
+          imagesSql,
+        });
+      }
+
+      return res.send({
+        uuid: query.uuid,
+      });
+    });
+  });
 });
 
 app.post(
@@ -392,36 +431,35 @@ app.post(
   checkAuthentication,
   upload.single('taskImage'),
   (req, res) => {
-  var fileName = uuidv4() + '.jpg';
-  fs.rename(
-    req.file.path,
-    uploadsPath + uploadsRelativePath + fileName,
-    (err) => {
-      if (err) {
-        res.status(500).send(err);
-      } else {
-        const query = {
-          uuid: uuidv4(),
-          task_id: null,
-          url: uploadsRelativePath + fileName,
-          // user_id: '600208f0-9442-4e2d-bbdf-c6d562e53d0f',
-          user_id: session.passport?.user,
-        };
-        const sql = sqlString.format('insert into task_image set ?', query);
-        connection.query(sql, (err, result) => {
-          if (err) {
-            return res.status(400).send({
-              code: err.errno,
-              type: err.code,
-              message: err.sqlMessage,
-            });
-          }
+    var fileName = uuidv4() + '.jpg';
+    fs.rename(
+      req.file.path,
+      uploadsPath + uploadsRelativePath + fileName,
+      (err) => {
+        if (err) {
+          res.status(500).send(err);
+        } else {
+          const query = {
+            uuid: uuidv4(),
+            task_id: null,
+            url: uploadsRelativePath + fileName,
+            user_id: session.passport?.user,
+          };
+          const sql = sqlString.format('insert into task_image set ?', query);
+          connection.query(sql, (err, result) => {
+            if (err) {
+              return res.status(400).send({
+                code: err.errno,
+                type: err.code,
+                message: err.sqlMessage,
+              });
+            }
 
-          return res.json(query);
-        });
+            return res.json(query);
+          });
+        }
       }
-    }
-  );
+    );
   }
 );
 
