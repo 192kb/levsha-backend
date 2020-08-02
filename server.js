@@ -1,6 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
+const multer = require('multer');
+const upload = multer({ dest: '/tmp/' });
+const fs = require('fs');
 const mysql = require('mysql');
 const { v4: uuidv4 } = require('uuid');
 const session = require('express-session');
@@ -30,6 +33,9 @@ connection.connect(function (err) {
   console.info('MySQL connected as id ' + connection.threadId);
 });
 
+// static
+app.use(express.static('/upload'));
+
 // parse application/json
 app.use(bodyParser.json());
 
@@ -47,6 +53,7 @@ app.use(passport.session());
 app.use(
   session({
     store: new FileStore({
+      path: '../sessions',
       ttl: cookieMaxAge,
       reapAsync: true,
       reapSyncFallback: true,
@@ -190,6 +197,8 @@ app.put(basePath + '/user', (req, res, next) => {
 });
 
 const checkAuthentication = (req, res, next) => {
+  // console.log(req.session.passport);
+  console.log(req.session.id);
   if (req.session && req.session.passport && req.session.passport.user) {
     next();
   } else {
@@ -375,8 +384,18 @@ app.get(basePath + '/task/', (req, res) => {
 
 app.put(basePath + '/task/', checkAuthentication, (req, res) => {});
 
-app.post(basePath + '/task/image', checkAuthentication, (req, res) => {
-  res.send(req);
+app.post(basePath + '/task/image', upload.single('taskImage'), (req, res) => {
+  var file = __dirname + '/upload/' + uuidv4() + '_' + req.file.originalname;
+  fs.rename(req.file.path, file, (err) => {
+    if (err) {
+      res.status(500).send(err);
+    } else {
+      res.json({
+        filename: req.file.filename,
+        file: req.file,
+      });
+    }
+  });
 });
 
 app.get(basePath + '/task/item/:task_id', (req, res) => {
