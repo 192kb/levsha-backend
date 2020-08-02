@@ -387,7 +387,11 @@ app.put(basePath + '/task/', checkAuthentication, (req, res) => {
   return res.send(req);
 });
 
-app.post(basePath + '/task/image', upload.single('taskImage'), (req, res) => {
+app.post(
+  basePath + '/task/image',
+  checkAuthentication,
+  upload.single('taskImage'),
+  (req, res) => {
   var fileName = uuidv4() + '.jpg';
   fs.rename(
     req.file.path,
@@ -418,7 +422,8 @@ app.post(basePath + '/task/image', upload.single('taskImage'), (req, res) => {
       }
     }
   );
-});
+  }
+);
 
 app.get(basePath + '/task/item/:task_id', (req, res) => {
   const sql = sqlString.format(
