@@ -414,8 +414,6 @@ app.put(basePath + '/task', (req, res) => {
           code: imagesErr.errno,
           type: imagesErr.code,
           message: imagesErr.sqlMessage,
-          imageIds,
-          imagesSql,
         });
       }
 
@@ -526,7 +524,7 @@ app.get(basePath + '/task/item/:task_id', (req, res) => {
 
         connection.query(sql, (err, result) => {
           if (err) reject(err);
-          if (result) task.location = result[0];
+          if (result) task.district = result[0];
           resolve(result);
         });
       });
