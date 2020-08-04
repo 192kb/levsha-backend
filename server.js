@@ -286,6 +286,13 @@ app.get(basePath + '/task/', (req, res) => {
         message: err.sqlMessage,
       });
 
+    if (!result.length)
+      return res.status(404).send({
+        code: 404,
+        type: 'TASKS_NOT_FOUND',
+        message: 'Работы не найдены',
+      });
+
     const taskCategoryIds = [
       ...new Set(result.map((task) => task.category_id)),
     ];
