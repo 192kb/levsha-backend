@@ -11,9 +11,11 @@ const FileStore = require('session-file-store')(session);
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const sqlString = require('sqlstring');
+const SMSru = require('sms_ru');
 
 const { credentials } = require('./credentials/db');
 const { sessionSecret, passwordHashFunction } = require('./credentials/salt');
+const { api } = require('./credentials/api');
 const {
   basePath,
   serverPort,
@@ -23,6 +25,9 @@ const {
   uploadsRelativePath,
   uploadsPath,
 } = require('./configuration');
+const { time } = require('console');
+
+const CODE_SENDING_TIMEOUT_SECONDS = 30;
 
 const connection = mysql.createConnection(credentials);
 connection.connect(function (err) {
@@ -578,6 +583,181 @@ app.get(basePath + '/task/category', (req, res) => {
     }
   );
 });
+
+app.post(basePath + '/user/:user_id/generate-code', (req, res) => {
+  const user_id = req.params.user_id;
+
+  const userSql = sqlString.format(
+    'select * from user where uuid = ? limit 1',
+    user_id
+  );
+  connection.query(userSql, (err, users) => {
+    if (err)
+      return res.status(404).send({
+        code: err.errno,
+        type: err.code,
+        message: err.sqlMessage,
+      });
+
+    const user = users[0];
+    const sms = new SMSru(api.sms_api_key);
+
+    if (user.is_deleted) {
+      sms.stoplist_add(
+        {
+          phone: user.phone,
+          text: 'Пользователь удален',
+        },
+        () => {
+          return res.status(404).send({
+            code: 300,
+            type: 'USER_BANNED',
+            message: 'Пользователь удален',
+          });
+        }
+      );
+    }
+
+    if (user.phone_confirmed) {
+      return res.status(404).send({
+        code: 301,
+        type: 'USER_CONFIRMED',
+        message: 'Номер уже подтвержден для этого пользователя',
+      });
+    }
+
+    const timeCheckSql = sqlFormat(
+      'select * from user_code where user_id = ? and (DATEDIFF(second, date_created, GETDATE()) < ?)',
+      [user_id, CODE_SENDING_TIMEOUT_SECONDS]
+    );
+
+    connection.query(timeCheckSql, (err, result) => {
+      if (err)
+        return res.status(400).send({
+          code: err.errno,
+          type: err.code,
+          message: err.sqlMessage,
+        });
+
+      if (result[0]) {
+        return res.status(423).send({
+          code: 423,
+          type: 'ALREADY_SENT',
+          message: 'Код уже отправлен, повторная отправка запрещена',
+        });
+      }
+
+      const code = generateSmsCode();
+
+      const sql = sqlString.format('insert into user_code set ?', {
+        user_id,
+        code,
+      });
+
+      connection.query(sql, (err, result) => {
+        if (err)
+          return res.status(400).send({
+            code: err.errno,
+            type: err.code,
+            message: err.sqlMessage,
+          });
+
+        sms.sms_send(
+          {
+            to: user.phone,
+            text: 'Код: ' + code,
+            from: 'Имя отправителя',
+            translit: false,
+            test: true,
+          },
+          (status) => {
+            console.info('SMS code was sent for', user.phone, code, status);
+            return res.status(200).send({ user_id, code, status });
+          }
+        );
+      });
+    });
+  });
+});
+
+app.post(basePath + '/user/:user_id/confirm', (req, res) => {
+  const user_id = req.params.user_id;
+  const code = req.body.code;
+
+  const userSql = sqlString.format(
+    'select * from user where uuid = ? limit 1',
+    user_id
+  );
+  connection.query(userSql, (err, users) => {
+    if (err)
+      return res.status(404).send({
+        code: err.errno,
+        type: err.code,
+        message: err.sqlMessage,
+      });
+
+    const user = users[0];
+    const sms = new SMSru(api.sms_api_key);
+
+    if (user.is_deleted) {
+      sms.stoplist_add(
+        {
+          phone: user.phone,
+          text: 'Пользователь удален',
+        },
+        () => {
+          return res.status(404).send({
+            code: 300,
+            type: 'USER_BANNED',
+            message: 'Пользователь удален',
+          });
+        }
+      );
+    }
+
+    if (user.phone_confirmed) {
+      return res.status(200).send({
+        code: 100,
+        type: 'USER_CONFIRMED',
+        message: 'Номер уже подтвержден для этого пользователя',
+      });
+    }
+
+    const sql = sqlString.format(
+      'select from user_code where user_id = ? and code = ?',
+      [user_id, code]
+    );
+
+    connection.query(sql, (err, result) => {
+      if (err)
+        return res.status(400).send({
+          code: err.errno,
+          type: err.code,
+          message: err.sqlMessage,
+        });
+
+      if (result[0]) {
+        res.status(200).send({
+          code: 100,
+          type: 'SUCCESS',
+          message: 'Пользователь подтверджен',
+        });
+
+        const removeCodesSql = sqlString.format(
+          'delete from user_code where user_id = ?',
+          user_id
+        );
+        connection.query(removeCodesSql, (err, result) => {
+          if (err) {
+            console.warn(err.sqlMessage, removeCodesSql);
+          }
+        });
+      }
+    });
+  });
+});
+
+const generateSmsCode = () => Math.floor(1000 + Math.random() * 9000);
 
 /// APPLICATION AVALIBILITY
 
