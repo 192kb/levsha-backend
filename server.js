@@ -180,7 +180,7 @@ app.get(basePath + '/user/logout', (req, res) => {
   });
 });
 
-app.put(basePath + '/user', (req, res, next) => {
+app.put(basePath + '/user/', (req, res, next) => {
   var query = {
     uuid: uuidv4(),
     firstname: req.body.firstname,
@@ -199,7 +199,7 @@ app.put(basePath + '/user', (req, res, next) => {
         message: err.sqlMessage,
       });
 
-    return res.send(result);
+    return res.send({ uuid: query.uuid });
   });
 });
 
@@ -758,6 +758,8 @@ app.post(basePath + '/user/:user_id/confirm', (req, res) => {
 });
 
 const generateSmsCode = () => Math.floor(1000 + Math.random() * 9000);
+
+const cleanupPhone = (phoneRaw) => phoneRaw.replace(/[-+()\s]/g, '');
 
 /// APPLICATION AVALIBILITY
 
