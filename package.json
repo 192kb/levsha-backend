@@ -22,6 +22,7 @@
     "start-watch": "nodemon --ignore 'sessions/' --ignore 'upload/' server.js"
   },
   "devDependencies": {
-    "nodemon": "^2.0.3"
+    "nodemon": "^2.0.3",
+    "ts-node": "^9.0.0"
   }
 }

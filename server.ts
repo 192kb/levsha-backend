@@ -111,8 +111,6 @@ passport.use(
         [phone, passwordHash]
       );
 
-      console.log(phone, passwordHash);
-
       connection.query(sql, (err, users) => {
         if (err) return done(err);
         if (!users[0]) {
@@ -182,7 +180,7 @@ app.get(basePath + '/user/logout', (req, res) => {
   });
 });
 
-app.put(basePath + '/user', (req, res, next) => {
+app.put(basePath + '/user/', (req, res, next) => {
   var query = {
     uuid: uuidv4(),
     firstname: req.body.firstname,
