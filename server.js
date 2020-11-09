@@ -111,7 +111,7 @@ passport.use(
         [phone, passwordHash]
       );
 
-      console.log(phone, passwordHash);
+      console.log(phone, passwordHash, sql);
 
       connection.query(sql, (err, users) => {
         if (err) return done(err);
@@ -628,7 +628,7 @@ app.post(basePath + '/user/:user_id/generate-code', (req, res) => {
       });
     }
 
-    const timeCheckSql = sqlFormat(
+    const timeCheckSql = sqlString.format(
       'select * from user_code where user_id = ? and (DATEDIFF(second, date_created, GETDATE()) < ?)',
       [user_id, CODE_SENDING_TIMEOUT_SECONDS]
     );

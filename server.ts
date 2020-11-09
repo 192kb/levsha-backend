@@ -1,31 +1,31 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const app = express();
-const multer = require('multer');
-const upload = multer({ dest: '/tmp/' });
-const fs = require('fs');
-const mysql = require('mysql');
-const { v4: uuidv4 } = require('uuid');
-const session = require('express-session');
-const FileStore = require('session-file-store')(session);
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const sqlString = require('sqlstring');
-const SMSru = require('sms_ru');
-
-const { credentials } = require('./credentials/db');
-const { sessionSecret, passwordHashFunction } = require('./credentials/salt');
-const { api } = require('./credentials/api');
-const {
-  basePath,
-  serverPort,
-  allowedOrigins,
+import express, { Request, RequestHandler, Response } from 'express';
+import bodyParser from 'body-parser';
+import multer from 'multer';
+import fs from 'fs';
+import mysql from 'mysql';
+import { v4 as uuidv4 } from 'uuid';
+import session from 'express-session';
+import passport from 'passport';
+import sqlString from 'sqlstring';
+import { District, Task, TaskCategory, TaskImage, User } from './model';
+import { credentials } from './credentials/db';
+import {
   cookieMaxAge,
-  serverApi,
-  uploadsRelativePath,
+  allowedOrigins,
+  basePath,
   uploadsPath,
-} = require('./configuration');
-const { time } = require('console');
+  uploadsRelativePath,
+  serverPort,
+  serverApi,
+} from './configuration';
+import { sessionSecret } from './credentials/salt';
+import { hashPassword } from './cryptography';
+import { hash } from 'bcrypt';
+
+const app = express();
+const upload = multer({ dest: '/tmp/' });
+const FileStore = require('session-file-store')(session);
+const LocalStrategy = require('passport-local').Strategy;
 
 const CODE_SENDING_TIMEOUT_SECONDS = 30;
 
@@ -70,7 +70,7 @@ app.use(
     cookie: {
       httpOnly: false,
       domain: '.192kb.ru',
-      expires: new Date() + cookieMaxAge,
+      expires: new Date(new Date().getTime() + cookieMaxAge),
       maxAge: cookieMaxAge,
       secure: false,
       sameSite: 'none',
@@ -81,7 +81,7 @@ app.use(
 /// CORS
 
 app.use((req, res, next) => {
-  if (!allowedOrigins.includes(req.headers.origin)) {
+  if (req.headers.origin && !allowedOrigins.includes(req.headers.origin)) {
     next();
     return;
   }
@@ -91,7 +91,7 @@ app.use((req, res, next) => {
     'Origin, X-Requested-With, Content-Type, Accept'
   );
   res.header('Access-Control-Allow-Methods', 'PUT, POST, GET, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Credentials', true);
+  res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
@@ -104,31 +104,38 @@ passport.use(
       passwordField: 'password',
       session: true,
     },
-    (phone, password, done) => {
-      const passwordHash = passwordHashFunction(password);
-      const sql = sqlString.format(
-        'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ok_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where phone = ? and password_hash = ? and is_deleted = 0 limit 1',
-        [phone, passwordHash]
-      );
-
-      connection.query(sql, (err, users) => {
-        if (err) return done(err);
-        if (!users[0]) {
-          return done(null, false);
-        }
-
-        const user = users[0];
-
-        const city_sql = sqlString.format(
-          'select * from location_city where is_deleted = 0 and id = ?',
-          user.city_id
+    (
+      phone: string,
+      password: string,
+      done: (error: mysql.MysqlError | null, arg1?: boolean | undefined) => void
+    ) => {
+      hashPassword(password, (passwordHash) => {
+        const sql = sqlString.format(
+          'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ok_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where phone = ? and password_hash = ? and is_deleted = 0 limit 1',
+          [phone, passwordHash]
         );
 
-        connection.query(city_sql, (err, result) => {
-          if (err) return done(err);
+        console.log(phone, passwordHash, sql);
 
-          user.city = result[0];
-          return done(null, user);
+        connection.query(sql, (err, users) => {
+          if (err) return done(err);
+          if (!users[0]) {
+            return done(null, false);
+          }
+
+          const user = users[0];
+
+          const city_sql = sqlString.format(
+            'select * from location_city where is_deleted = 0 and id = ?',
+            user.city_id
+          );
+
+          connection.query(city_sql, (err, result) => {
+            if (err) return done(err);
+
+            user.city = result[0];
+            return done(null, user);
+          });
         });
       });
     }
@@ -136,15 +143,14 @@ passport.use(
 );
 
 // tell passport how to serialize the user
-passport.serializeUser((user, done) => {
+passport.serializeUser((user: User, done) => {
   done(null, user.uuid);
 });
 
-passport.deserializeUser((uuid, done) => {
-  const sql = sqlString.format(
-    'select * from user where uuid = ? limit 1',
-    uuid
-  );
+passport.deserializeUser((uuid: string, done) => {
+  const sql = sqlString.format('select * from user where uuid = ? limit 1', [
+    uuid,
+  ]);
   connection.query(sql, (err, users) => {
     if (err) return done(err);
     done(null, users[0]);
@@ -168,7 +174,7 @@ app.post(basePath + '/user/login', (req, res, next) => {
 
 app.get(basePath + '/user/logout', (req, res) => {
   req.logout();
-  req.session.destroy(function (err) {
+  req.session?.destroy(function (err) {
     if (err) {
       console.warn(err);
     } else {
@@ -180,32 +186,33 @@ app.get(basePath + '/user/logout', (req, res) => {
   });
 });
 
-app.put(basePath + '/user/', (req, res, next) => {
-  var query = {
-    uuid: uuidv4(),
-    firstname: req.body.firstname,
-    secondname: req.body.secondname,
-    lastname: req.body.lastname,
-    phone: req.body.phone,
-    password_hash: passwordHashFunction(req.body.password),
-    city_id: req.body.city.id,
-  };
-  var sql = sqlString.format('insert into user set ?', query);
-  connection.query(sql, (err, result) => {
-    if (err)
-      return res.status(400).send({
-        code: err.errno,
-        type: err.code,
-        message: err.sqlMessage,
-      });
+app.put(basePath + '/user', (req, res, next) => {
+  hashPassword(req.body.password, (hash) => {
+    var query = {
+      uuid: uuidv4(),
+      firstname: req.body.firstname,
+      secondname: req.body.secondname,
+      lastname: req.body.lastname,
+      phone: req.body.phone,
+      password_hash: hash,
+      city_id: req.body.city.id,
+    };
+    var sql = sqlString.format('insert into user set ?', query);
+    connection.query(sql, (err, result) => {
+      if (err)
+        return res.status(400).send({
+          code: err.errno,
+          type: err.code,
+          message: err.sqlMessage,
+        });
 
-    return res.send({ uuid: query.uuid });
+      return res.send({ uuid: query.uuid });
+    });
   });
 });
 
-const checkAuthentication = (req, res, next) => {
-  // console.log(req.session.passport);
-  console.log(req.session.id);
+const checkAuthentication = (req: Request, res: Response, next: () => void) => {
+  console.log(req.session?.id);
   if (req.session && req.session.passport && req.session.passport.user) {
     next();
   } else {
@@ -220,7 +227,7 @@ const checkAuthentication = (req, res, next) => {
 app.get(basePath + '/user', checkAuthentication, (req, res) => {
   const sql = sqlString.format(
     'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ok_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
-    req.session.passport.user
+    req.session?.passport.user
   );
 
   connection.query(sql, (err, result) => {
@@ -267,7 +274,7 @@ app.get(basePath + '/city', (req, res) => {
 app.get(basePath + '/city/:city_id/district', (req, res) => {
   const sql = sqlString.format(
     'select * from location_district where city_id = ?',
-    req.params.city_id
+    [req.params.city_id]
   );
   connection.query(sql, (err, result) => {
     if (err)
@@ -282,8 +289,8 @@ app.get(basePath + '/city/:city_id/district', (req, res) => {
 });
 
 app.get(basePath + '/task/', (req, res) => {
-  const sql = sqlString.format('select * from task limit 10');
-  connection.query(sql, (err, result) => {
+  const sql = 'select * from task limit 10';
+  connection.query(sql, (err, result: Task[]) => {
     if (err)
       return res.status(400).send({
         code: err.errno,
@@ -299,15 +306,31 @@ app.get(basePath + '/task/', (req, res) => {
       });
 
     const taskCategoryIds = [
-      ...new Set(result.map((task) => task.category_id)),
+      ...new Set(
+        result.map(
+          (task) => ((task as unknown) as { category_id: number }).category_id
+        )
+      ),
     ];
-    const userIds = [...new Set(result.map((task) => task.user_id))];
-    const districtIds = [...new Set(result.map((task) => task.location_id))];
+    const userIds = [
+      ...new Set(
+        result.map((task) => ((task as unknown) as { user_id: string }).user_id)
+      ),
+    ];
+    const districtIds = [
+      ...new Set(
+        result.map(
+          (task) => ((task as unknown) as { location_id: number }).location_id
+        )
+      ),
+    ];
 
-    let taskCategories = [];
-    let users = [];
-    let districts = [];
-    let images = {};
+    let taskCategories: TaskCategory[] = [];
+    let users: User[] = [];
+    let districts: District[] = [];
+    let images: {
+      [x: string]: TaskImage;
+    } = {};
 
     const taskPromise = new Promise((resolve, reject) => {
       const sql = sqlString.format(
@@ -356,13 +379,13 @@ app.get(basePath + '/task/', (req, res) => {
         new Promise((resolve, reject) => {
           const sql = sqlString.format(
             'select * from task_image where task_id = ? and is_deleted = 0',
-            task.uuid
+            [task.uuid]
           );
 
-          connection.query(sql, (err, result) => {
+          connection.query(sql, (err, result: TaskImage) => {
             if (err) reject(err);
 
-            images[task.uuid] = result;
+            images[task.uuid || 'undefined'] = result;
             resolve(result);
           });
         })
@@ -374,14 +397,22 @@ app.get(basePath + '/task/', (req, res) => {
           result.map((task) => {
             return {
               ...task,
-              user: users.find((user) => user.uuid === task.user_id),
+              user: users.find(
+                (user) =>
+                  user.uuid ===
+                  ((task as unknown) as { user_id: string }).user_id
+              ),
               district: districts.find(
-                (district) => district.id === task.location_id
+                (district) =>
+                  district.id ===
+                  ((task as unknown) as { location_id: number }).location_id
               ),
               category: taskCategories.find(
-                (category) => category.id === task.category_id
+                (category) =>
+                  category.id ===
+                  ((task as unknown) as { category_id: number }).category_id
               ),
-              images: images[task.uuid],
+              images: images[task.uuid || 'undefined'],
             };
           })
         );
@@ -404,7 +435,7 @@ app.put(basePath + '/task', (req, res) => {
     price: req.body.price,
     category_id: req.body.category?.id,
     location_id: req.body.district?.id,
-    user_id: req.session.passport?.user,
+    user_id: req.session?.passport?.user,
   };
   const sql = sqlString.format('insert into task set ?', query);
   connection.query(sql, (err, result) => {
@@ -415,7 +446,9 @@ app.put(basePath + '/task', (req, res) => {
         message: err.sqlMessage,
       });
     }
-    const imageIds = req.body.images?.map((image) => image.uuid);
+    const imageIds: string[] = req.body.images?.map(
+      (image: TaskImage) => image.uuid
+    );
     const imagesSql = sqlString.format(
       'update task_image set task_id = ? where uuid in (?)',
       [query.uuid, imageIds]
@@ -453,7 +486,7 @@ app.post(
             uuid: uuidv4(),
             task_id: null,
             url: uploadsRelativePath + fileName,
-            user_id: session.passport?.user,
+            user_id: req.session?.passport?.user,
           };
           const sql = sqlString.format('insert into task_image set ?', query);
           connection.query(sql, (err, result) => {
@@ -474,10 +507,9 @@ app.post(
 );
 
 app.get(basePath + '/task/item/:task_id', (req, res) => {
-  const sql = sqlString.format(
-    'select * from task where uuid = ? limit 1',
-    req.params.task_id
-  );
+  const sql = sqlString.format('select * from task where uuid = ? limit 1', [
+    req.params.task_id,
+  ]);
   connection.query(sql, (err, result) => {
     if (err) {
       return res.status(400).send({
@@ -584,182 +616,7 @@ app.get(basePath + '/task/category', (req, res) => {
   );
 });
 
-app.post(basePath + '/user/:user_id/generate-code', (req, res) => {
-  const user_id = req.params.user_id;
-
-  const userSql = sqlString.format(
-    'select * from user where uuid = ? limit 1',
-    user_id
-  );
-  connection.query(userSql, (err, users) => {
-    if (err)
-      return res.status(404).send({
-        code: err.errno,
-        type: err.code,
-        message: err.sqlMessage,
-      });
-
-    const user = users[0];
-    const sms = new SMSru(api.sms_api_key);
-
-    if (user.is_deleted) {
-      sms.stoplist_add(
-        {
-          phone: user.phone,
-          text: 'Пользователь удален',
-        },
-        () => {
-          return res.status(404).send({
-            code: 300,
-            type: 'USER_BANNED',
-            message: 'Пользователь удален',
-          });
-        }
-      );
-    }
-
-    if (user.phone_confirmed) {
-      return res.status(404).send({
-        code: 301,
-        type: 'USER_CONFIRMED',
-        message: 'Номер уже подтвержден для этого пользователя',
-      });
-    }
-
-    const timeCheckSql = sqlFormat(
-      'select * from user_code where user_id = ? and (DATEDIFF(second, date_created, GETDATE()) < ?)',
-      [user_id, CODE_SENDING_TIMEOUT_SECONDS]
-    );
-
-    connection.query(timeCheckSql, (err, result) => {
-      if (err)
-        return res.status(400).send({
-          code: err.errno,
-          type: err.code,
-          message: err.sqlMessage,
-        });
-
-      if (result[0]) {
-        return res.status(423).send({
-          code: 423,
-          type: 'ALREADY_SENT',
-          message: 'Код уже отправлен, повторная отправка запрещена',
-        });
-      }
-
-      const code = generateSmsCode();
-
-      const sql = sqlString.format('insert into user_code set ?', {
-        user_id,
-        code,
-      });
-
-      connection.query(sql, (err, result) => {
-        if (err)
-          return res.status(400).send({
-            code: err.errno,
-            type: err.code,
-            message: err.sqlMessage,
-          });
-
-        sms.sms_send(
-          {
-            to: user.phone,
-            text: 'Код: ' + code,
-            from: 'Имя отправителя',
-            translit: false,
-            test: true,
-          },
-          (status) => {
-            console.info('SMS code was sent for', user.phone, code, status);
-            return res.status(200).send({ user_id, code, status });
-          }
-        );
-      });
-    });
-  });
-});
-
-app.post(basePath + '/user/:user_id/confirm', (req, res) => {
-  const user_id = req.params.user_id;
-  const code = req.body.code;
-
-  const userSql = sqlString.format(
-    'select * from user where uuid = ? limit 1',
-    user_id
-  );
-  connection.query(userSql, (err, users) => {
-    if (err)
-      return res.status(404).send({
-        code: err.errno,
-        type: err.code,
-        message: err.sqlMessage,
-      });
-
-    const user = users[0];
-    const sms = new SMSru(api.sms_api_key);
-
-    if (user.is_deleted) {
-      sms.stoplist_add(
-        {
-          phone: user.phone,
-          text: 'Пользователь удален',
-        },
-        () => {
-          return res.status(404).send({
-            code: 300,
-            type: 'USER_BANNED',
-            message: 'Пользователь удален',
-          });
-        }
-      );
-    }
-
-    if (user.phone_confirmed) {
-      return res.status(200).send({
-        code: 100,
-        type: 'USER_CONFIRMED',
-        message: 'Номер уже подтвержден для этого пользователя',
-      });
-    }
-
-    const sql = sqlString.format(
-      'select from user_code where user_id = ? and code = ?',
-      [user_id, code]
-    );
-
-    connection.query(sql, (err, result) => {
-      if (err)
-        return res.status(400).send({
-          code: err.errno,
-          type: err.code,
-          message: err.sqlMessage,
-        });
-
-      if (result[0]) {
-        res.status(200).send({
-          code: 100,
-          type: 'SUCCESS',
-          message: 'Пользователь подтверджен',
-        });
-
-        const removeCodesSql = sqlString.format(
-          'delete from user_code where user_id = ?',
-          user_id
-        );
-        connection.query(removeCodesSql, (err, result) => {
-          if (err) {
-            console.warn(err.sqlMessage, removeCodesSql);
-          }
-        });
-      }
-    });
-  });
-});
-
-const generateSmsCode = () => Math.floor(1000 + Math.random() * 9000);
-
-const cleanupPhone = (phoneRaw) => phoneRaw.replace(/[-+()\s]/g, '');
+const cleanupPhone = (phoneRaw: string) => phoneRaw.replace(/[-+()\s]/g, '');
 
 /// APPLICATION AVALIBILITY
 

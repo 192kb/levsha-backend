@@ -6,23 +6,28 @@
     "bcrypt": "^5.0.0",
     "express": "^4.17.1",
     "express-session": "^1.17.1",
-    "material-design-icons": "^3.0.1",
     "multer": "^1.4.2",
     "mysql": "^2.18.1",
     "passport": "^0.4.1",
     "passport-local": "^1.0.0",
-    "session-file-store": "^1.4.0",
-    "sms_ru": "0.0.1",
+    "session-file-store": "^1.5.0",
     "sqlstring": "^2.3.2",
     "typescript": "^4.0.5",
-    "uuid": "^8.3.0"
+    "uuid": "^8.3.1"
   },
   "scripts": {
-    "start": "node server.js",
-    "start-watch": "nodemon --ignore 'sessions/' --ignore 'upload/' server.js"
+    "start": "ts-node server.ts"
   },
   "devDependencies": {
-    "nodemon": "^2.0.3",
+    "@types/bcrypt": "^3.0.0",
+    "@types/body-parser": "^1.19.0",
+    "@types/express": "^4.17.8",
+    "@types/express-session": "^1.17.0",
+    "@types/multer": "^1.4.4",
+    "@types/mysql": "^2.15.15",
+    "@types/passport": "^1.0.4",
+    "@types/sqlstring": "^2.2.1",
+    "@types/uuid": "^8.3.0",
     "ts-node": "^9.0.0"
   }
 }

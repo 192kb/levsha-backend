@@ -2,7 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'levsha-backend',
-      script: 'server.js',
+      script: 'ts-node',
+      args: 'server.ts',
 
       // Options reference: https://pm2.io/doc/en/runtime/reference/ecosystem-file/
       // args: 'one two',
