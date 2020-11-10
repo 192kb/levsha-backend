@@ -616,8 +616,6 @@ app.get(basePath + '/task/category', (req, res) => {
   );
 });
 
-const cleanupPhone = (phoneRaw: string) => phoneRaw.replace(/[-+()\s]/g, '');
-
 /// APPLICATION AVALIBILITY
 
 app.listen(serverPort, () => {
