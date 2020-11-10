@@ -1,16 +1,18 @@
-import express, { Request, RequestHandler, Response } from 'express';
+import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
 import multer from 'multer';
 import fs from 'fs';
 import mysql from 'mysql';
 import { v4 as uuidv4 } from 'uuid';
-import session from 'express-session';
 import passport from 'passport';
+import { Strategy as LocalStrategy } from 'passport-local';
+import { Strategy as VKStrategy } from 'passport-vkontakte';
+import { Strategy as InstStrategy } from 'passport-instagram';
 import sqlString from 'sqlstring';
 import { District, Task, TaskCategory, TaskImage, User } from './model';
 import { credentials } from './credentials/db';
 import {
-  cookieMaxAge,
   allowedOrigins,
   basePath,
   uploadsPath,
@@ -18,16 +20,18 @@ import {
   serverPort,
   serverApi,
 } from './configuration';
+import { comparePasswordWithHash, hashPassword } from './cryptography';
+import session from 'express-session';
 import { sessionSecret } from './credentials/salt';
-import { hashPassword } from './cryptography';
-import { hash } from 'bcrypt';
+import {
+  instApiClientId,
+  instApiClientSecret,
+  vkApiClientId,
+  vkApiClientSecret,
+} from './credentials/api';
 
 const app = express();
 const upload = multer({ dest: '/tmp/' });
-const FileStore = require('session-file-store')(session);
-const LocalStrategy = require('passport-local').Strategy;
-
-const CODE_SENDING_TIMEOUT_SECONDS = 30;
 
 const connection = mysql.createConnection(credentials);
 connection.connect(function (err) {
@@ -55,28 +59,16 @@ app.use(
 
 /// SESSION
 
-app.use(passport.initialize());
-app.use(passport.session());
+app.use(cookieParser());
 app.use(
   session({
-    store: new FileStore({
-      ttl: cookieMaxAge,
-      reapAsync: true,
-      reapSyncFallback: true,
-    }),
     secret: sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: false,
-      domain: '.192kb.ru',
-      expires: new Date(new Date().getTime() + cookieMaxAge),
-      maxAge: cookieMaxAge,
-      secure: false,
-      sameSite: 'none',
-    },
+    resave: true,
+    saveUninitialized: true,
   })
 );
+app.use(passport.initialize());
+app.use(passport.session());
 
 /// CORS
 
@@ -102,42 +94,87 @@ passport.use(
     {
       usernameField: 'phone',
       passwordField: 'password',
-      session: true,
     },
     (
       phone: string,
       password: string,
-      done: (error: mysql.MysqlError | null, arg1?: boolean | undefined) => void
+      done: (
+        error: mysql.MysqlError | {} | null,
+        arg1?: boolean | undefined
+      ) => void
     ) => {
-      hashPassword(password, (passwordHash) => {
-        const sql = sqlString.format(
-          'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ok_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where phone = ? and password_hash = ? and is_deleted = 0 limit 1',
-          [phone, passwordHash]
-        );
+      const sql = sqlString.format(
+        'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ig_profile, tw_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id, password_hash from user where phone = ? and is_deleted = 0 limit 1',
+        [phone]
+      );
 
-        console.log(phone, passwordHash, sql);
-
-        connection.query(sql, (err, users) => {
-          if (err) return done(err);
-          if (!users[0]) {
-            return done(null, false);
-          }
-
-          const user = users[0];
-
-          const city_sql = sqlString.format(
-            'select * from location_city where is_deleted = 0 and id = ?',
-            user.city_id
+      connection.query(sql, (err, users) => {
+        if (err) return done(err);
+        if (!users[0]) {
+          return done(
+            {
+              code: 401,
+              type: 'AUTH_NOT_PASSED',
+              message: 'Неправильный логин',
+            },
+            false
           );
+        }
 
-          connection.query(city_sql, (err, result) => {
-            if (err) return done(err);
+        const user = users[0];
 
-            user.city = result[0];
-            return done(null, user);
-          });
+        comparePasswordWithHash(password, user.password_hash, (valid) => {
+          if (valid) {
+            const city_sql = sqlString.format(
+              'select * from location_city where is_deleted = 0 and id = ?',
+              user.city_id
+            );
+
+            connection.query(city_sql, (err, result) => {
+              if (err) return done(err);
+
+              user.city = result[0];
+              user.password_hash = undefined;
+              return done(null, user);
+            });
+          } else {
+            return done(
+              {
+                code: 401,
+                type: 'AUTH_NOT_PASSED',
+                message: 'Неправильный пароль',
+              },
+              false
+            );
+          }
         });
       });
+    }
+  )
+);
+
+passport.use(
+  new VKStrategy(
+    {
+      clientID: vkApiClientId,
+      clientSecret: vkApiClientSecret,
+      callbackURL: serverApi + '/user/vk/callback',
+    },
+    (accessToken, refreshToken, params, profile, done) => {
+      console.log(accessToken, refreshToken, params, profile, done);
+    }
+  )
+);
+
+passport.use(
+  new InstStrategy(
+    {
+      clientID: instApiClientId,
+      clientSecret: instApiClientSecret,
+      callbackURL: serverApi + '/user/inst/callback',
+    },
+    function (accessToken, refreshToken, profile, done) {
+      console.log(accessToken, refreshToken, profile, done);
     }
   )
 );
@@ -160,13 +197,7 @@ passport.deserializeUser((uuid: string, done) => {
 app.post(basePath + '/user/login', (req, res, next) => {
   passport.authenticate('local', (err, user, info) => {
     req.login(user, (err) => {
-      if (err || !user)
-        return res.status(401).send({
-          code: 401,
-          type: 'AUTH_NOT_PASSED',
-          message: 'Неправильный логин / пароль',
-        });
-
+      if (err || !user) return res.status(401).send(err);
       return res.send(user);
     });
   })(req, res, next);
@@ -212,8 +243,7 @@ app.put(basePath + '/user', (req, res, next) => {
 });
 
 const checkAuthentication = (req: Request, res: Response, next: () => void) => {
-  console.log(req.session?.id);
-  if (req.session && req.session.passport && req.session.passport.user) {
+  if (req.session?.passport?.user) {
     next();
   } else {
     res.status(401).send({
@@ -224,9 +254,33 @@ const checkAuthentication = (req: Request, res: Response, next: () => void) => {
   }
 };
 
+app.get(
+  basePath + '/user/vk',
+  passport.authenticate('vkontakte', { scope: ['email', 'offline'] })
+);
+
+app.get(
+  basePath + '/user/vk/callback',
+  passport.authenticate('vkontakte', {
+    successRedirect: '/',
+    failureRedirect: '/login',
+  })
+);
+
+app.get('/user/instagram', passport.authenticate('instagram'));
+
+app.get(
+  '/user/instagram/callback',
+  passport.authenticate('instagram', { failureRedirect: '/login' }),
+  function (req, res) {
+    // Successful authentication, redirect home.
+    res.redirect('/');
+  }
+);
+
 app.get(basePath + '/user', checkAuthentication, (req, res) => {
   const sql = sqlString.format(
-    'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ok_profile, ig_profile, tw_profile, yt_profile, be_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
+    'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ig_profile, tw_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
     req.session?.passport.user
   );
 
@@ -288,7 +342,7 @@ app.get(basePath + '/city/:city_id/district', (req, res) => {
   });
 });
 
-app.get(basePath + '/task/', (req, res) => {
+app.get(basePath + '/task', (req, res) => {
   const sql = 'select * from task limit 10';
   connection.query(sql, (err, result: Task[]) => {
     if (err)
