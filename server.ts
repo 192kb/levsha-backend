@@ -153,31 +153,31 @@ passport.use(
   )
 );
 
-passport.use(
-  new VKStrategy(
-    {
-      clientID: vkApiClientId,
-      clientSecret: vkApiClientSecret,
-      callbackURL: serverApi + '/user/vk/callback',
-    },
-    (accessToken, refreshToken, params, profile, done) => {
-      console.log(accessToken, refreshToken, params, profile, done);
-    }
-  )
-);
+// passport.use(
+//   new VKStrategy(
+//     {
+//       clientID: vkApiClientId,
+//       clientSecret: vkApiClientSecret,
+//       callbackURL: serverApi + '/user/vk/callback',
+//     },
+//     (accessToken, refreshToken, params, profile, done) => {
+//       console.log(accessToken, refreshToken, params, profile, done);
+//     }
+//   )
+// );
 
-passport.use(
-  new InstStrategy(
-    {
-      clientID: instApiClientId,
-      clientSecret: instApiClientSecret,
-      callbackURL: serverApi + '/user/inst/callback',
-    },
-    function (accessToken, refreshToken, profile, done) {
-      console.log(accessToken, refreshToken, profile, done);
-    }
-  )
-);
+// passport.use(
+//   new InstStrategy(
+//     {
+//       clientID: instApiClientId,
+//       clientSecret: instApiClientSecret,
+//       callbackURL: serverApi + '/user/inst/callback',
+//     },
+//     function (accessToken, refreshToken, profile, done) {
+//       console.log(accessToken, refreshToken, profile, done);
+//     }
+//   )
+// );
 
 // tell passport how to serialize the user
 passport.serializeUser((user: User, done) => {
