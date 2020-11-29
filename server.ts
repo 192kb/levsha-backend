@@ -561,7 +561,7 @@ app.post(
 );
 
 app.get(basePath + '/task/item/:task_id', (req, res) => {
-  const sql = sqlString.format('select * from task where uuid = ? limit 1', [
+  const sql = sqlString.format('select * from task where uuid = ?', [
     req.params.task_id,
   ]);
   connection.query(sql, (err, result) => {
@@ -578,11 +578,11 @@ app.get(basePath + '/task/item/:task_id', (req, res) => {
       const userPromise = new Promise((resolve, reject) => {
         const sql = sqlString.format(
           'select uuid, photo_url, phone, firstname, lastname, secondname, city_id from user where uuid = ? limit 1',
-          task.user_id
+          [task.user_id]
         );
 
         connection.query(sql, (err, result) => {
-          if (err) reject(err);
+          if (err) return reject({ ...err, sql });
           if (result) task.user = result[0];
           resolve(result);
         });
@@ -591,11 +591,11 @@ app.get(basePath + '/task/item/:task_id', (req, res) => {
       const imagePromise = new Promise((resolve, reject) => {
         const sql = sqlString.format(
           'select * from task_image where task_id = ? and is_deleted = 0 limit 3',
-          task.uuid
+          [task.uuid]
         );
 
         connection.query(sql, (err, result) => {
-          if (err) reject(err);
+          if (err) return reject({ ...err, sql });
           if (result) task.images = result;
           resolve(result);
         });
@@ -604,11 +604,11 @@ app.get(basePath + '/task/item/:task_id', (req, res) => {
       const categoryPromise = new Promise((resolve, reject) => {
         const sql = sqlString.format(
           'select * from task_category where id = ? limit 1',
-          task.category_id
+          [task.category_id]
         );
 
         connection.query(sql, (err, result) => {
-          if (err) reject(err);
+          if (err) return reject({ ...err, sql });
           if (result) task.category = result[0];
           resolve(result);
         });
@@ -617,11 +617,11 @@ app.get(basePath + '/task/item/:task_id', (req, res) => {
       const locationPromise = new Promise((resolve, reject) => {
         const sql = sqlString.format(
           'select * from location_district where id = ? limit 1',
-          task.location_id
+          [task.location_id]
         );
 
         connection.query(sql, (err, result) => {
-          if (err) reject(err);
+          if (err) return reject({ ...err, sql });
           if (result) task.district = result[0];
           resolve(result);
         });
@@ -631,6 +631,7 @@ app.get(basePath + '/task/item/:task_id', (req, res) => {
         .then(() => res.send(task))
         .catch((err) => {
           res.status(400).send({
+            sql: err.sql,
             code: err.errno,
             type: err.code,
             message: err.sqlMessage,

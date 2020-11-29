@@ -12,5 +12,5 @@ export const allowedOrigins = [
 ];
 export const cookieMaxAge = 3600000;
 export const brand = 'Levsha';
-export const uploadsPath = __dirname + '/../../html';
+export const uploadsPath = __dirname + '/../html';
 export const uploadsRelativePath = '/uploads/';
