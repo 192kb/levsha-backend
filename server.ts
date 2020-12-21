@@ -7,8 +7,6 @@ import mysql from 'mysql';
 import { v4 as uuidv4 } from 'uuid';
 import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
-import { Strategy as VKStrategy } from 'passport-vkontakte';
-import { Strategy as InstStrategy } from 'passport-instagram';
 import sqlString from 'sqlstring';
 import { District, Task, TaskCategory, TaskImage, User } from './model';
 import { credentials } from './credentials/db';
@@ -23,12 +21,6 @@ import {
 import { comparePasswordWithHash, hashPassword } from './cryptography';
 import session from 'express-session';
 import { sessionSecret } from './credentials/salt';
-import {
-  instApiClientId,
-  instApiClientSecret,
-  vkApiClientId,
-  vkApiClientSecret,
-} from './credentials/api';
 
 const app = express();
 const upload = multer({ dest: '/tmp/' });
@@ -153,32 +145,6 @@ passport.use(
   )
 );
 
-// passport.use(
-//   new VKStrategy(
-//     {
-//       clientID: vkApiClientId,
-//       clientSecret: vkApiClientSecret,
-//       callbackURL: serverApi + '/user/vk/callback',
-//     },
-//     (accessToken, refreshToken, params, profile, done) => {
-//       console.log(accessToken, refreshToken, params, profile, done);
-//     }
-//   )
-// );
-
-// passport.use(
-//   new InstStrategy(
-//     {
-//       clientID: instApiClientId,
-//       clientSecret: instApiClientSecret,
-//       callbackURL: serverApi + '/user/inst/callback',
-//     },
-//     function (accessToken, refreshToken, profile, done) {
-//       console.log(accessToken, refreshToken, profile, done);
-//     }
-//   )
-// );
-
 // tell passport how to serialize the user
 passport.serializeUser((user: User, done) => {
   done(null, user.uuid);
@@ -243,7 +209,7 @@ app.put(basePath + '/user', (req, res, next) => {
 });
 
 const checkAuthentication = (req: Request, res: Response, next: () => void) => {
-  if (req.session?.passport?.user) {
+  if ((req.session as any)?.passport?.user) {
     next();
   } else {
     res.status(401).send({
@@ -281,7 +247,7 @@ app.get(
 app.get(basePath + '/user', checkAuthentication, (req, res) => {
   const sql = sqlString.format(
     'select uuid, photo_url, phone, firstname, lastname, secondname, vk_profile, ig_profile, tw_profile, li_profile, hh_profile, phone_confirmed, email, email_confirmed, city_id from user where uuid = ? LIMIT 1',
-    req.session?.passport.user
+    (req.session as any)?.passport.user
   );
 
   connection.query(sql, (err, result) => {
@@ -490,7 +456,7 @@ app.put(basePath + '/task', (req, res) => {
     price: req.body.price,
     category_id: req.body.category?.id,
     location_id: req.body.district?.id,
-    user_id: req.session?.passport?.user,
+    user_id: (req.session as any)?.passport?.user,
   };
   const sql = sqlString.format('insert into task set ?', query);
   connection.query(sql, (err, result) => {
@@ -541,7 +507,7 @@ app.post(
             uuid: uuidv4(),
             task_id: null,
             url: uploadsRelativePath + fileName,
-            user_id: req.session?.passport?.user,
+            user_id: (req.session as any)?.passport?.user,
           };
           const sql = sqlString.format('insert into task_image set ?', query);
           connection.query(sql, (err, result) => {
