@@ -343,7 +343,8 @@ app.get(basePath + '/city/:city_id/district', (req, res) => {
 });
 
 app.get(basePath + '/task', (req, res) => {
-  const sql = 'select * from task limit 10';
+  const sql =
+    'select * from task WHERE date_created > DATE_ADD(CURDATE(), INTERVAL -3 DAY)'; // last 3 days to be displayed
   connection.query(sql, (err, result: Task[]) => {
     if (err)
       return res.status(400).send({
