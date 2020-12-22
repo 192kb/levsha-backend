@@ -308,9 +308,7 @@ app.get(basePath + '/city/:city_id/district', (req, res) => {
   });
 });
 
-app.get(basePath + '/task', (req, res) => {
-  const sql =
-    'select * from task WHERE date_created > DATE_ADD(CURDATE(), INTERVAL -3 DAY)'; // last 3 days to be displayed
+const getTaskByQuery = (res: Response, sql: string) =>
   connection.query(sql, (err, result: Task[]) => {
     if (err)
       return res.status(400).send({
@@ -446,6 +444,22 @@ app.get(basePath + '/task', (req, res) => {
         });
       });
   });
+
+app.get(basePath + '/task', (req, res) => {
+  const sql =
+    'select * from task WHERE date_created > DATE_ADD(CURDATE(), INTERVAL -3 DAY) and is_deleted = 0'; // last 3 days to be displayed
+
+  return getTaskByQuery(res, sql);
+});
+
+app.get(basePath + '/user/task', checkAuthentication, (req, res) => {
+  const userId = (req.session as any)?.passport?.user;
+
+  const sql = sqlString.format('select * from task where user_id = ?', [
+    userId,
+  ]);
+
+  return getTaskByQuery(res, sql);
 });
 
 app.put(basePath + '/task', (req, res) => {
@@ -528,9 +542,10 @@ app.post(
 );
 
 app.get(basePath + '/task/item/:task_id', (req, res) => {
-  const sql = sqlString.format('select * from task where uuid = ?', [
-    req.params.task_id,
-  ]);
+  const sql = sqlString.format(
+    'select * from task where uuid = ? and is_deleted = 0',
+    [req.params.task_id]
+  );
   connection.query(sql, (err, result) => {
     if (err) {
       return res.status(400).send({
@@ -610,16 +625,93 @@ app.get(basePath + '/task/item/:task_id', (req, res) => {
   });
 });
 
-app.post(
-  basePath + '/task/item/:task_id',
-  checkAuthentication,
-  (req, res) => {}
-);
+app.post(basePath + '/task/item/:task_id', checkAuthentication, (req, res) => {
+  const query = {
+    title: req.body.title,
+    description: req.body.description,
+    price: req.body.price,
+    category_id: req.body.category?.id,
+    location_id: req.body.district?.id,
+  };
+  const taskId = req.params.task_id;
+  const userId = (req.session as any)?.passport?.user;
+
+  const taskSql = sqlString.format(
+    'update task set ? where uuid = ? and user_id = ?',
+    [query, taskId, userId]
+  );
+
+  connection.query(taskSql, (err, result) => {
+    if (err) {
+      return res.status(400).send({
+        code: err.errno,
+        type: err.code,
+        message: err.sqlMessage,
+      });
+    }
+
+    const oldImagesSql = sqlString.format(
+      'update task_image set task_id = NULL where task_id = ?',
+      [taskId]
+    );
+
+    connection.query(oldImagesSql, (err, result) => {
+      if (err) {
+        return res.status(400).send({
+          code: err.errno,
+          type: err.code,
+          message: err.sqlMessage,
+        });
+      }
+
+      const imagesSql = sqlString.format(
+        'update task_image set task_id = ? where uuid in (?)',
+        [taskId, req.body.images?.map((image: TaskImage) => image.uuid)]
+      );
+
+      connection.query(imagesSql, (imagesErr) => {
+        if (imagesErr) {
+          return res.status(400).send({
+            code: imagesErr.errno,
+            type: imagesErr.code,
+            message: imagesErr.sqlMessage,
+          });
+        }
+
+        return res.send({
+          uuid: taskId,
+        });
+      });
+    });
+  });
+});
 
 app.delete(
   basePath + '/task/item/:task_id',
   checkAuthentication,
-  (req, res) => {}
+  (req, res) => {
+    const taskId = req.params.task_id;
+    const userId = (req.session as any)?.passport?.user;
+
+    const taskQuery = sqlString.format(
+      'update task set is_deleted = 1 where task_id = ? and user_id = ?',
+      [taskId, userId]
+    );
+
+    connection.query(taskQuery, (err, result) => {
+      if (err) {
+        return res.status(400).send({
+          code: err.errno,
+          type: err.code,
+          message: err.sqlMessage,
+        });
+      }
+
+      return res.send({
+        uuid: taskId,
+      });
+    });
+  }
 );
 
 app.get(basePath + '/task/category', (req, res) => {
