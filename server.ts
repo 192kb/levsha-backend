@@ -664,24 +664,33 @@ app.post(basePath + '/task/item/:task_id', checkAuthentication, (req, res) => {
         });
       }
 
-      const imagesSql = sqlString.format(
-        'update task_image set task_id = ? where uuid in (?)',
-        [taskId, req.body.images?.map((image: TaskImage) => image.uuid)]
-      );
+      const imageIds = req.body.images?.map((image: TaskImage) => image.uuid);
+      if (imageIds.length) {
+        const imagesSql = sqlString.format(
+          'update task_image set task_id = ? where uuid in (?)',
+          [taskId, imageIds]
+        );
 
-      connection.query(imagesSql, (imagesErr) => {
-        if (imagesErr) {
-          return res.status(400).send({
-            code: imagesErr.errno,
-            type: imagesErr.code,
-            message: imagesErr.sqlMessage,
+        connection.query(imagesSql, (imagesErr) => {
+          if (imagesErr) {
+            return res.status(400).send({
+              code: imagesErr.errno,
+              type: imagesErr.code,
+              message: imagesErr.sqlMessage,
+              imageIds,
+              imagesSql,
+            });
+          }
+
+          return res.send({
+            uuid: taskId,
           });
-        }
-
+        });
+      } else {
         return res.send({
           uuid: taskId,
         });
-      });
+      }
     });
   });
 });
@@ -694,7 +703,7 @@ app.delete(
     const userId = (req.session as any)?.passport?.user;
 
     const taskQuery = sqlString.format(
-      'update task set is_deleted = 1 where task_id = ? and user_id = ?',
+      'update task set is_deleted = 1 where uuid = ? and user_id = ?',
       [taskId, userId]
     );
 
