@@ -56,7 +56,11 @@ app.use(
   session({
     secret: sessionSecret,
     resave: true,
-    saveUninitialized: true,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: false,
+      sameSite: 'none',
+    },
   })
 );
 app.use(passport.initialize());
@@ -213,36 +217,13 @@ const checkAuthentication = (req: Request, res: Response, next: () => void) => {
     next();
   } else {
     res.status(401).send({
+      req,
       code: 401,
       message: 'Вы не авторизованы',
       type: 'NO_AUTH',
     });
   }
 };
-
-app.get(
-  basePath + '/user/vk',
-  passport.authenticate('vkontakte', { scope: ['email', 'offline'] })
-);
-
-app.get(
-  basePath + '/user/vk/callback',
-  passport.authenticate('vkontakte', {
-    successRedirect: '/',
-    failureRedirect: '/login',
-  })
-);
-
-app.get('/user/instagram', passport.authenticate('instagram'));
-
-app.get(
-  '/user/instagram/callback',
-  passport.authenticate('instagram', { failureRedirect: '/login' }),
-  function (req, res) {
-    // Successful authentication, redirect home.
-    res.redirect('/');
-  }
-);
 
 app.get(basePath + '/user', checkAuthentication, (req, res) => {
   const sql = sqlString.format(
@@ -327,19 +308,19 @@ const getTaskByQuery = (res: Response, sql: string) =>
     const taskCategoryIds = [
       ...new Set(
         result.map(
-          (task) => ((task as unknown) as { category_id: number }).category_id
+          (task) => (task as unknown as { category_id: number }).category_id
         )
       ),
     ];
     const userIds = [
       ...new Set(
-        result.map((task) => ((task as unknown) as { user_id: string }).user_id)
+        result.map((task) => (task as unknown as { user_id: string }).user_id)
       ),
     ];
     const districtIds = [
       ...new Set(
         result.map(
-          (task) => ((task as unknown) as { location_id: number }).location_id
+          (task) => (task as unknown as { location_id: number }).location_id
         )
       ),
     ];
@@ -418,18 +399,17 @@ const getTaskByQuery = (res: Response, sql: string) =>
               ...task,
               user: users.find(
                 (user) =>
-                  user.uuid ===
-                  ((task as unknown) as { user_id: string }).user_id
+                  user.uuid === (task as unknown as { user_id: string }).user_id
               ),
               district: districts.find(
                 (district) =>
                   district.id ===
-                  ((task as unknown) as { location_id: number }).location_id
+                  (task as unknown as { location_id: number }).location_id
               ),
               category: taskCategories.find(
                 (category) =>
                   category.id ===
-                  ((task as unknown) as { category_id: number }).category_id
+                  (task as unknown as { category_id: number }).category_id
               ),
               images: images[task.uuid || 'undefined'],
             };
@@ -739,9 +719,8 @@ app.get(basePath + '/task/category', (req, res) => {
   );
 });
 
-/// APPLICATION AVALIBILITY
+/// APPLICATION AVAILABILITY
 
 app.listen(serverPort, () => {
-  console.info('Listening on localhost: ' + serverPort);
-  console.info('A api now available at ' + serverApi);
+  console.info(`Listening api:port ${serverApi}:${serverPort}`);
 });
