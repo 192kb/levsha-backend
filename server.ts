@@ -33,7 +33,7 @@ connection.connect(function (err) {
     return;
   }
 
-  console.info('MySQL connected as id ' + connection.threadId);
+  console.info(`MySQL connected as id ${connection.threadId}`);
 });
 
 // static
