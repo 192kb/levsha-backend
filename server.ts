@@ -21,6 +21,7 @@ import {
 import { comparePasswordWithHash, hashPassword } from './cryptography';
 import session from 'express-session';
 import { sessionSecret } from './credentials/salt';
+import { rateLimit } from 'express-rate-limit';
 
 const app = express();
 const upload = multer({ dest: '/tmp/' });
@@ -73,7 +74,6 @@ app.use((req, res, next) => {
     next();
     return;
   }
-  res.header('Access-Control-Allow-Origin', req.headers.origin);
   res.header(
     'Access-Control-Allow-Headers',
     'Origin, X-Requested-With, Content-Type, Accept'
@@ -82,6 +82,17 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
+
+/// RATE LIMITER
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 250, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+// Apply the rate limiting middleware to all requests
+app.use(limiter);
 
 /// AUTH
 
@@ -150,9 +161,11 @@ passport.use(
 );
 
 // tell passport how to serialize the user
-passport.serializeUser((user: User, done) => {
-  done(null, user.uuid);
-});
+passport.serializeUser(
+  (user: unknown, done: (err: any, id?: unknown) => void) => {
+    done(null, (user as User).uuid);
+  }
+);
 
 passport.deserializeUser((uuid: string, done) => {
   const sql = sqlString.format('select * from user where uuid = ? limit 1', [
@@ -289,7 +302,7 @@ app.get(basePath + '/city/:city_id/district', (req, res) => {
   });
 });
 
-const getTaskByQuery = (res: Response, sql: string) =>
+const getTaskByQuery = (req: Request, res: Response, sql: string) =>
   connection.query(sql, (err, result: Task[]) => {
     if (err)
       return res.status(400).send({
@@ -328,6 +341,10 @@ const getTaskByQuery = (res: Response, sql: string) =>
     let taskCategories: TaskCategory[] = [];
     let users: User[] = [];
     let districts: District[] = [];
+    let favs: {
+      id_task: string;
+      id_user: string;
+    }[] = [];
     let images: {
       [x: string]: TaskImage;
     } = {};
@@ -391,7 +408,29 @@ const getTaskByQuery = (res: Response, sql: string) =>
         })
     );
 
-    Promise.all([taskPromise, userPromise, districtPromise, ...imagePromises])
+    const userId = (req.session as any)?.passport?.user;
+
+    const favPromise = new Promise((resolve, reject) => {
+      const sql = sqlString.format(
+        'SELECT * FROM levsha.task_favorite where id_user = ? LIMIT 100;',
+        [userId]
+      );
+
+      connection.query(sql, (err, result) => {
+        if (err) reject(err);
+
+        favs = result;
+        resolve(result);
+      });
+    });
+
+    Promise.all([
+      taskPromise,
+      userPromise,
+      districtPromise,
+      ...imagePromises,
+      favPromise,
+    ])
       .then(() => {
         res.send(
           result.map((task) => {
@@ -412,6 +451,7 @@ const getTaskByQuery = (res: Response, sql: string) =>
                   (task as unknown as { category_id: number }).category_id
               ),
               images: images[task.uuid || 'undefined'],
+              is_favorite: favs.some((fav) => fav.id_task === task.uuid),
             };
           })
         );
@@ -429,7 +469,7 @@ app.get(basePath + '/task', (req, res) => {
   const sql =
     'select * from task WHERE date_created > DATE_ADD(CURDATE(), INTERVAL -3 DAY) and is_deleted = 0'; // last 3 days to be displayed
 
-  return getTaskByQuery(res, sql);
+  return getTaskByQuery(req, res, sql);
 });
 
 app.get(basePath + '/user/task', checkAuthentication, (req, res) => {
@@ -439,7 +479,7 @@ app.get(basePath + '/user/task', checkAuthentication, (req, res) => {
     userId,
   ]);
 
-  return getTaskByQuery(res, sql);
+  return getTaskByQuery(req, res, sql);
 });
 
 app.put(basePath + '/task', (req, res) => {
@@ -490,34 +530,35 @@ app.post(
   upload.single('taskImage'),
   (req, res) => {
     var fileName = uuidv4() + '.jpg';
-    fs.rename(
-      req.file.path,
-      uploadsPath + uploadsRelativePath + fileName,
-      (err) => {
-        if (err) {
-          res.status(500).send(err);
-        } else {
-          const query = {
-            uuid: uuidv4(),
-            task_id: null,
-            url: uploadsRelativePath + fileName,
-            user_id: (req.session as any)?.passport?.user,
-          };
-          const sql = sqlString.format('insert into task_image set ?', query);
-          connection.query(sql, (err, result) => {
-            if (err) {
-              return res.status(400).send({
-                code: err.errno,
-                type: err.code,
-                message: err.sqlMessage,
-              });
-            }
+    req.file &&
+      fs.rename(
+        req.file.path,
+        uploadsPath + uploadsRelativePath + fileName,
+        (err) => {
+          if (err) {
+            res.status(500).send(err);
+          } else {
+            const query = {
+              uuid: uuidv4(),
+              task_id: null,
+              url: uploadsRelativePath + fileName,
+              user_id: (req.session as any)?.passport?.user,
+            };
+            const sql = sqlString.format('insert into task_image set ?', query);
+            connection.query(sql, (err, result) => {
+              if (err) {
+                return res.status(400).send({
+                  code: err.errno,
+                  type: err.code,
+                  message: err.sqlMessage,
+                });
+              }
 
-            return res.json(query);
-          });
+              return res.json(query);
+            });
+          }
         }
-      }
-    );
+      );
   }
 );
 
@@ -702,6 +743,17 @@ app.delete(
     });
   }
 );
+
+app.get(basePath + '/task/by_favorites', checkAuthentication, (req, res) => {
+  const userId = (req.session as any)?.passport?.user;
+
+  const sql = sqlString.format(
+    'select * from task_favorite join task ON task.uuid = task_favorite.id_task where task_favorite.id_user = ?;',
+    [userId]
+  );
+
+  return getTaskByQuery(req, res, sql);
+});
 
 app.get(basePath + '/task/category', (req, res) => {
   connection.query(

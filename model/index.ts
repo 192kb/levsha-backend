@@ -1,4 +1,5 @@
-// tslint:disable
+/* tslint:disable */
+/* eslint-disable */
 /**
  * Проект LEVSHA
  * Levsha is open small work listing project
@@ -14,3 +15,4 @@
 
 export * from "./api";
 export * from "./configuration";
+
