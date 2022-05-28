@@ -755,7 +755,7 @@ app.get(basePath + '/task/by_favorites', checkAuthentication, (req, res) => {
   return getTaskByQuery(req, res, sql);
 });
 
-app.get(basePath + '/task/category', (req, res) => {
+app.all(basePath + '/task/category', (req, res) => {
   connection.query(
     'select * from task_category order by sorting',
     (err, result) => {
@@ -770,6 +770,51 @@ app.get(basePath + '/task/category', (req, res) => {
     }
   );
 });
+
+app.all(
+  basePath + '/task/item/:task_id/fav',
+  checkAuthentication,
+  (req, res) => {
+    const id_task = req.params.task_id;
+    const id_user = (req.session as any)?.passport?.user;
+
+    if (req.query['value'] === 'true') {
+      const sql = sqlString.format('insert into task_favorite set ?', {
+        id_task,
+        id_user,
+      });
+
+      connection.query(sql, (err, result) => {
+        if (err) {
+          return res.status(400).send({
+            code: err.errno,
+            type: err.code,
+            message: err.sqlMessage,
+          });
+        }
+
+        return res.json(result);
+      });
+    } else {
+      const sql = sqlString.format(
+        'delete from task_favorite where id_task = ? AND id_user = ? limit 1',
+        [id_task, id_user]
+      );
+
+      connection.query(sql, (err, result) => {
+        if (err) {
+          return res.status(400).send({
+            code: err.errno,
+            type: err.code,
+            message: err.sqlMessage,
+          });
+        }
+
+        return res.json(result);
+      });
+    }
+  }
+);
 
 /// APPLICATION AVAILABILITY
 
