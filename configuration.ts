@@ -8,5 +8,5 @@ export const minPassword_length = 4;
 export const allowedOrigins = ['http://localhost'];
 export const cookieMaxAge = 3600000;
 export const brand = 'Levsha';
-export const uploadsPath = __dirname + '/..';
+export const uploadsPath = __dirname + '/../html';
 export const uploadsRelativePath = '/uploads/';
