@@ -22,6 +22,7 @@ import { comparePasswordWithHash, hashPassword } from './cryptography';
 import session from 'express-session';
 import { sessionSecret } from './credentials/salt';
 import { rateLimit } from 'express-rate-limit';
+import path from 'path';
 
 const app = express();
 const upload = multer({ dest: '/tmp/' });
@@ -60,7 +61,6 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: false,
-      sameSite: 'none',
     },
   })
 );
@@ -70,10 +70,7 @@ app.use(passport.session());
 /// CORS
 
 app.use((req, res, next) => {
-  if (req.headers.origin && !allowedOrigins.includes(req.headers.origin)) {
-    next();
-    return;
-  }
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
   res.header(
     'Access-Control-Allow-Headers',
     'Origin, X-Requested-With, Content-Type, Accept'
@@ -341,7 +338,7 @@ const getTaskByQuery = (req: Request, res: Response, sql: string) =>
     let taskCategories: TaskCategory[] = [];
     let users: User[] = [];
     let districts: District[] = [];
-    let favs: {
+    let favorites: {
       id_task: string;
       id_user: string;
     }[] = [];
@@ -419,7 +416,7 @@ const getTaskByQuery = (req: Request, res: Response, sql: string) =>
       connection.query(sql, (err, result) => {
         if (err) reject(err);
 
-        favs = result;
+        favorites = result;
         resolve(result);
       });
     });
@@ -451,7 +448,7 @@ const getTaskByQuery = (req: Request, res: Response, sql: string) =>
                   (task as unknown as { category_id: number }).category_id
               ),
               images: images[task.uuid || 'undefined'],
-              is_favorite: favs.some((fav) => fav.id_task === task.uuid),
+              is_favorite: favorites.some((fav) => fav.id_task === task.uuid),
             };
           })
         );
@@ -475,9 +472,10 @@ app.get(basePath + '/task', (req, res) => {
 app.get(basePath + '/user/task', checkAuthentication, (req, res) => {
   const userId = (req.session as any)?.passport?.user;
 
-  const sql = sqlString.format('select * from task where user_id = ?', [
-    userId,
-  ]);
+  const sql = sqlString.format(
+    'select * from task where is_deleted = 0 and user_id = ?',
+    [userId]
+  );
 
   return getTaskByQuery(req, res, sql);
 });
@@ -533,7 +531,7 @@ app.post(
     req.file &&
       fs.rename(
         req.file.path,
-        uploadsPath + uploadsRelativePath + fileName,
+        path.normalize(uploadsPath + uploadsRelativePath + fileName),
         (err) => {
           if (err) {
             res.status(500).send(err);
