@@ -473,7 +473,7 @@ app.get(basePath + '/user/task', checkAuthentication, (req, res) => {
   const userId = (req.session as any)?.passport?.user;
 
   const sql = sqlString.format(
-    'select * from task where is_deleted = 0 and user_id = ?',
+    'select * from task where date_created > DATE_ADD(CURDATE(), INTERVAL -3 DAY) and is_deleted = 0 and user_id = ?',
     [userId]
   );
 
@@ -628,7 +628,27 @@ app.get(basePath + '/task/item/:task_id', (req, res) => {
         });
       });
 
-      Promise.all([locationPromise, userPromise, categoryPromise, imagePromise])
+      const favoritesPromise = new Promise((resolve, reject) => {
+        const userId = (req.session as any)?.passport?.user;
+        const sql = sqlString.format(
+          'select count(id_user) from task_favorite where id_task = ? and id_user = ? limit 1',
+          [req.params.task_id, userId]
+        );
+
+        connection.query(sql, (err, result) => {
+          if (err) return reject({ ...err, sql });
+          if (result) task.is_favorite = Boolean(result);
+          resolve(result);
+        });
+      });
+
+      Promise.all([
+        locationPromise,
+        userPromise,
+        categoryPromise,
+        imagePromise,
+        favoritesPromise,
+      ])
         .then(() => res.send(task))
         .catch((err) => {
           res.status(400).send({
@@ -746,7 +766,7 @@ app.get(basePath + '/task/by_favorites', checkAuthentication, (req, res) => {
   const userId = (req.session as any)?.passport?.user;
 
   const sql = sqlString.format(
-    'select * from task_favorite join task ON task.uuid = task_favorite.id_task where task_favorite.id_user = ?;',
+    'select * from task_favorite join task ON task.uuid = task_favorite.id_task where task_favorite.id_user = ? and task.date_created > DATE_ADD(CURDATE(), INTERVAL -3 DAY);',
     [userId]
   );
 
@@ -817,5 +837,7 @@ app.all(
 /// APPLICATION AVAILABILITY
 
 app.listen(serverPort, () => {
-  console.info(`Listening api:port ${serverApi}:${serverPort}`);
+  const url = new URL(serverApi);
+  url.port = `${serverPort}`;
+  console.info(`Listening api ${url}`);
 });
