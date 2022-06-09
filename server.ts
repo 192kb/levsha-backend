@@ -637,7 +637,9 @@ app.get(basePath + '/task/item/:task_id', (req, res) => {
 
         connection.query(sql, (err, result) => {
           if (err) return reject({ ...err, sql });
-          if (result) task.is_favorite = Boolean(result['count(id_user)']);
+          if (result)
+            task.is_favorite = (result['count(id_user)'] as number) == 1;
+          if (result) task.is_favorite_debug = result;
           resolve(result);
         });
       });
