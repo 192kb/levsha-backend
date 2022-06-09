@@ -637,7 +637,7 @@ app.get(basePath + '/task/item/:task_id', (req, res) => {
 
         connection.query(sql, (err, result) => {
           if (err) return reject({ ...err, sql });
-          if (result) task.is_favorite = Boolean(result);
+          if (result) task.is_favorite = result;
           resolve(result);
         });
       });
@@ -811,7 +811,12 @@ app.all(
           });
         }
 
-        return res.json(result);
+        return res.json({
+          taskId: id_task,
+          userId: id_user,
+          query: req.query,
+          result: { ...result },
+        });
       });
     } else {
       const sql = sqlString.format(
@@ -828,7 +833,12 @@ app.all(
           });
         }
 
-        return res.json(result);
+        return res.json({
+          taskId: id_task,
+          userId: id_user,
+          query: req.query,
+          result: { ...result },
+        });
       });
     }
   }
