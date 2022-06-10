@@ -227,7 +227,6 @@ const checkAuthentication = (req: Request, res: Response, next: () => void) => {
     next();
   } else {
     res.status(401).send({
-      req,
       code: 401,
       message: 'Вы не авторизованы',
       type: 'NO_AUTH',
