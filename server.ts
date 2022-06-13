@@ -183,17 +183,22 @@ app.post(basePath + '/user/login', (req, res, next) => {
   })(req, res, next);
 });
 
-app.get(basePath + '/user/logout', (req, res) => {
-  req.logout();
-  req.session?.destroy(function (err) {
-    if (err) {
-      console.warn(err);
-    } else {
-      res.clearCookie('connect.sid');
-      res.send({
-        status: 'logged-out',
-      });
+app.get(basePath + '/user/logout', (req, res, next) => {
+  req.logout(function (err1) {
+    if (err1) {
+      return next(err1);
     }
+
+    req.session?.destroy(function (err) {
+      if (err) {
+        console.warn(err);
+      } else {
+        res.clearCookie('connect.sid');
+        res.send({
+          status: 'logged-out',
+        });
+      }
+    });
   });
 });
 
