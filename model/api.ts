@@ -564,7 +564,7 @@ export interface User {
      * @type {boolean}
      * @memberof User
      */
-    'phone_comfirmed'?: boolean;
+    'phone_confirmed'?: boolean;
     /**
      * 
      * @type {boolean}
@@ -642,9 +642,9 @@ export const LocationApiAxiosParamCreator = function (configuration?: Configurat
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getDiscrictsByCityId: async (cityId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+        getDistrictsByCityId: async (cityId: number, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'cityId' is not null or undefined
-            assertParamExists('getDiscrictsByCityId', 'cityId', cityId)
+            assertParamExists('getDistrictsByCityId', 'cityId', cityId)
             const localVarPath = `/city/{city_id}/district`
                 .replace(`{${"city_id"}}`, encodeURIComponent(String(cityId)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -698,8 +698,8 @@ export const LocationApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getDiscrictsByCityId(cityId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<District>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getDiscrictsByCityId(cityId, options);
+        async getDistrictsByCityId(cityId: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<District>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getDistrictsByCityId(cityId, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
     }
@@ -728,8 +728,8 @@ export const LocationApiFactory = function (configuration?: Configuration, baseP
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getDiscrictsByCityId(cityId: number, options?: any): AxiosPromise<Array<District>> {
-            return localVarFp.getDiscrictsByCityId(cityId, options).then((request) => request(axios, basePath));
+        getDistrictsByCityId(cityId: number, options?: any): AxiosPromise<Array<District>> {
+            return localVarFp.getDistrictsByCityId(cityId, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -760,8 +760,8 @@ export class LocationApi extends BaseAPI {
      * @throws {RequiredError}
      * @memberof LocationApi
      */
-    public getDiscrictsByCityId(cityId: number, options?: AxiosRequestConfig) {
-        return LocationApiFp(this.configuration).getDiscrictsByCityId(cityId, options).then((request) => request(this.axios, this.basePath));
+    public getDistrictsByCityId(cityId: number, options?: AxiosRequestConfig) {
+        return LocationApiFp(this.configuration).getDistrictsByCityId(cityId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
@@ -1832,17 +1832,17 @@ export const UserApiAxiosParamCreator = function (configuration?: Configuration)
             };
         },
         /**
-         * This can only be done by the logged in user with privilegy.
+         * This can only be done by the logged in user with privileges.
          * @summary Delete user
-         * @param {string} username The name that needs to be deleted
+         * @param {string} uuid The user uuid that needs to be deleted
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deleteUser: async (username: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'username' is not null or undefined
-            assertParamExists('deleteUser', 'username', username)
-            const localVarPath = `/user/{username}`
-                .replace(`{${"username"}}`, encodeURIComponent(String(username)));
+        deleteUser: async (uuid: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'uuid' is not null or undefined
+            assertParamExists('deleteUser', 'uuid', uuid)
+            const localVarPath = `/user/{uuid}`
+                .replace(`{${"uuid"}}`, encodeURIComponent(String(uuid)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -1902,15 +1902,15 @@ export const UserApiAxiosParamCreator = function (configuration?: Configuration)
         /**
          * 
          * @summary Get user by user name
-         * @param {string} username The name that needs to be fetched. Use user1 for testing. 
+         * @param {string} uuid The uuid that needs to be fetched.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getUserByName: async (username: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'username' is not null or undefined
-            assertParamExists('getUserByName', 'username', username)
-            const localVarPath = `/user/{username}`
-                .replace(`{${"username"}}`, encodeURIComponent(String(username)));
+        getUserByUuid: async (uuid: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'uuid' is not null or undefined
+            assertParamExists('getUserByUuid', 'uuid', uuid)
+            const localVarPath = `/user/{uuid}`
+                .replace(`{${"uuid"}}`, encodeURIComponent(String(uuid)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -2007,19 +2007,19 @@ export const UserApiAxiosParamCreator = function (configuration?: Configuration)
         },
         /**
          * This can only be done by the logged in user.
-         * @summary Updated user
-         * @param {string} username name that need to be updated
+         * @summary Update user
+         * @param {string} uuid name that need to be updated
          * @param {User} user 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        updateUser: async (username: string, user: User, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'username' is not null or undefined
-            assertParamExists('updateUser', 'username', username)
+        updateUser: async (uuid: string, user: User, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'uuid' is not null or undefined
+            assertParamExists('updateUser', 'uuid', uuid)
             // verify required parameter 'user' is not null or undefined
             assertParamExists('updateUser', 'user', user)
-            const localVarPath = `/user/{username}`
-                .replace(`{${"username"}}`, encodeURIComponent(String(username)));
+            const localVarPath = `/user/{uuid}`
+                .replace(`{${"uuid"}}`, encodeURIComponent(String(uuid)));
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -2069,14 +2069,14 @@ export const UserApiFp = function(configuration?: Configuration) {
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
         /**
-         * This can only be done by the logged in user with privilegy.
+         * This can only be done by the logged in user with privileges.
          * @summary Delete user
-         * @param {string} username The name that needs to be deleted
+         * @param {string} uuid The user uuid that needs to be deleted
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async deleteUser(username: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.deleteUser(username, options);
+        async deleteUser(uuid: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.deleteUser(uuid, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
         /**
@@ -2092,12 +2092,12 @@ export const UserApiFp = function(configuration?: Configuration) {
         /**
          * 
          * @summary Get user by user name
-         * @param {string} username The name that needs to be fetched. Use user1 for testing. 
+         * @param {string} uuid The uuid that needs to be fetched.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async getUserByName(username: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getUserByName(username, options);
+        async getUserByUuid(uuid: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<User>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.getUserByUuid(uuid, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
         /**
@@ -2123,14 +2123,14 @@ export const UserApiFp = function(configuration?: Configuration) {
         },
         /**
          * This can only be done by the logged in user.
-         * @summary Updated user
-         * @param {string} username name that need to be updated
+         * @summary Update user
+         * @param {string} uuid name that need to be updated
          * @param {User} user 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async updateUser(username: string, user: User, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.updateUser(username, user, options);
+        async updateUser(uuid: string, user: User, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.updateUser(uuid, user, options);
             return createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration);
         },
     }
@@ -2154,14 +2154,14 @@ export const UserApiFactory = function (configuration?: Configuration, basePath?
             return localVarFp.createUser(user, options).then((request) => request(axios, basePath));
         },
         /**
-         * This can only be done by the logged in user with privilegy.
+         * This can only be done by the logged in user with privileges.
          * @summary Delete user
-         * @param {string} username The name that needs to be deleted
+         * @param {string} uuid The user uuid that needs to be deleted
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        deleteUser(username: string, options?: any): AxiosPromise<void> {
-            return localVarFp.deleteUser(username, options).then((request) => request(axios, basePath));
+        deleteUser(uuid: string, options?: any): AxiosPromise<void> {
+            return localVarFp.deleteUser(uuid, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -2175,12 +2175,12 @@ export const UserApiFactory = function (configuration?: Configuration, basePath?
         /**
          * 
          * @summary Get user by user name
-         * @param {string} username The name that needs to be fetched. Use user1 for testing. 
+         * @param {string} uuid The uuid that needs to be fetched.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        getUserByName(username: string, options?: any): AxiosPromise<User> {
-            return localVarFp.getUserByName(username, options).then((request) => request(axios, basePath));
+        getUserByUuid(uuid: string, options?: any): AxiosPromise<User> {
+            return localVarFp.getUserByUuid(uuid, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -2203,14 +2203,14 @@ export const UserApiFactory = function (configuration?: Configuration, basePath?
         },
         /**
          * This can only be done by the logged in user.
-         * @summary Updated user
-         * @param {string} username name that need to be updated
+         * @summary Update user
+         * @param {string} uuid name that need to be updated
          * @param {User} user 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        updateUser(username: string, user: User, options?: any): AxiosPromise<void> {
-            return localVarFp.updateUser(username, user, options).then((request) => request(axios, basePath));
+        updateUser(uuid: string, user: User, options?: any): AxiosPromise<void> {
+            return localVarFp.updateUser(uuid, user, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -2235,15 +2235,15 @@ export class UserApi extends BaseAPI {
     }
 
     /**
-     * This can only be done by the logged in user with privilegy.
+     * This can only be done by the logged in user with privileges.
      * @summary Delete user
-     * @param {string} username The name that needs to be deleted
+     * @param {string} uuid The user uuid that needs to be deleted
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof UserApi
      */
-    public deleteUser(username: string, options?: AxiosRequestConfig) {
-        return UserApiFp(this.configuration).deleteUser(username, options).then((request) => request(this.axios, this.basePath));
+    public deleteUser(uuid: string, options?: AxiosRequestConfig) {
+        return UserApiFp(this.configuration).deleteUser(uuid, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -2260,13 +2260,13 @@ export class UserApi extends BaseAPI {
     /**
      * 
      * @summary Get user by user name
-     * @param {string} username The name that needs to be fetched. Use user1 for testing. 
+     * @param {string} uuid The uuid that needs to be fetched.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof UserApi
      */
-    public getUserByName(username: string, options?: AxiosRequestConfig) {
-        return UserApiFp(this.configuration).getUserByName(username, options).then((request) => request(this.axios, this.basePath));
+    public getUserByUuid(uuid: string, options?: AxiosRequestConfig) {
+        return UserApiFp(this.configuration).getUserByUuid(uuid, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -2294,15 +2294,15 @@ export class UserApi extends BaseAPI {
 
     /**
      * This can only be done by the logged in user.
-     * @summary Updated user
-     * @param {string} username name that need to be updated
+     * @summary Update user
+     * @param {string} uuid name that need to be updated
      * @param {User} user 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof UserApi
      */
-    public updateUser(username: string, user: User, options?: AxiosRequestConfig) {
-        return UserApiFp(this.configuration).updateUser(username, user, options).then((request) => request(this.axios, this.basePath));
+    public updateUser(uuid: string, user: User, options?: AxiosRequestConfig) {
+        return UserApiFp(this.configuration).updateUser(uuid, user, options).then((request) => request(this.axios, this.basePath));
     }
 }
 

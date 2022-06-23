@@ -204,7 +204,7 @@ app.get(basePath + '/user/logout', (req, res, next) => {
 
 app.put(basePath + '/user', (req, res, next) => {
   hashPassword(req.body.password, (hash) => {
-    var query = {
+    const query = {
       uuid: uuidv4(),
       firstname: req.body.firstname,
       secondname: req.body.secondname,
@@ -213,7 +213,7 @@ app.put(basePath + '/user', (req, res, next) => {
       password_hash: hash,
       city_id: req.body.city.id,
     };
-    var sql = sqlString.format('insert into user set ?', query);
+    const sql = sqlString.format('insert into user set ?', query);
     connection.query(sql, (err, result) => {
       if (err)
         return res.status(400).send({
@@ -265,10 +265,6 @@ app.get(basePath + '/user', checkAuthentication, (req, res) => {
 });
 
 /// ROUTING
-
-app.get(basePath + '/ping', (req, res) => {
-  return res.send('pong');
-});
 
 app.get(basePath + '/city', (req, res) => {
   connection.query(
@@ -531,7 +527,7 @@ app.post(
   checkAuthentication,
   upload.single('taskImage'),
   (req, res) => {
-    var fileName = uuidv4() + '.jpg';
+    const fileName = uuidv4() + '.jpg';
     req.file &&
       fs.rename(
         req.file.path,
@@ -641,8 +637,7 @@ app.get(basePath + '/task/item/:task_id', (req, res) => {
 
         connection.query(sql, (err, result) => {
           if (err) return reject({ ...err, sql });
-          if (result)
-            task.is_favorite = result[0]['count(id_user)'] == 1;
+          if (result) task.is_favorite = result[0]['count(id_user)'] == 1;
           if (result) task.is_favorite_debug = result;
           resolve(result);
         });
@@ -727,12 +722,12 @@ app.post(basePath + '/task/item/:task_id', checkAuthentication, (req, res) => {
             });
           }
 
-          return res.send({
+          return res.status(200).send({
             uuid: taskId,
           });
         });
       } else {
-        return res.send({
+        return res.status(200).send({
           uuid: taskId,
         });
       }
@@ -850,7 +845,151 @@ app.all(
   }
 );
 
+/// USER
+app.get(basePath + '/user/:uuid', (req, res) => {
+  const userId = req.params.uuid;
+
+  if (userId) {
+    const query = sqlString.format(
+      'select * from user where uuid = ? limit 1',
+      [userId]
+    );
+    connection.query(query, (err, result) => {
+      if (err) {
+        return res.status(400).send({
+          code: err.errno,
+          type: err.code,
+          message: err.sqlMessage,
+        });
+      }
+
+      delete result[0].password_hash;
+
+      res.status(200).json({ ...result[0], userId });
+    });
+  }
+});
+
+app.get(basePath + '/user/:uuid', (req, res) => {
+  const userId = req.params.uuid;
+
+  if (userId) {
+    const query = sqlString.format(
+      'select * from user where uuid = ? limit 1',
+      [userId]
+    );
+    connection.query(query, (err, result) => {
+      if (err) {
+        return res.status(400).send({
+          code: err.errno,
+          type: err.code,
+          message: err.sqlMessage,
+        });
+      }
+
+      delete result[0].password_hash;
+
+      res.status(200).json({ ...result[0], userId });
+    });
+  }
+});
+
+app.post(basePath + '/user/:uuid', checkAuthentication, (req, res) => {
+  const userId = req.params.uuid;
+
+  const userObject = {
+    firstname: req.body.firstname,
+    secondname: req.body.secondname,
+    lastname: req.body.lastname,
+    email: req.body.email,
+    city_id: req.body.city.id,
+  };
+
+  if (userId) {
+    const query = sqlString.format('update from set ? where uuid = ? limit 1', [
+      userObject,
+      userId,
+    ]);
+    connection.query(query, (err, result) => {
+      if (err) {
+        return res.status(400).send({
+          code: err.errno,
+          type: err.code,
+          message: err.sqlMessage,
+        });
+      }
+
+      res.status(200).json({ userId, result });
+    });
+  }
+});
+
+app.delete(basePath + 'user/:uuid', checkAuthentication, (req, res) => {
+  const userId = req.params.uuid;
+
+  const userObject = {
+    is_deleted: 1,
+    date_deleted: Date.now(),
+  };
+
+  if (userId) {
+    const query = sqlString.format('update from set ? where uuid = ? limit 1', [
+      userObject,
+      userId,
+    ]);
+    connection.query(query, (err, result) => {
+      if (err) {
+        return res.status(400).send({
+          code: err.errno,
+          type: err.code,
+          message: err.sqlMessage,
+        });
+      }
+
+      res.status(200).json({ userId, result });
+    });
+  }
+});
+
+app.post(basePath + 'user/:uuid/image', checkAuthentication, (req, res) => {
+  const userId = req.params.uuid;
+  const fileName = uuidv4() + '.jpg';
+  req.file &&
+    fs.rename(
+      req.file.path,
+      path.normalize(uploadsPath + uploadsRelativePath + fileName),
+      (err) => {
+        if (err) {
+          res.status(500).send(err);
+        } else {
+          const query = {
+            photo_url: uploadsRelativePath + fileName,
+          };
+          const sql = sqlString.format(
+            'update user set ? where uuid = ? limit 1',
+            [query, userId]
+          );
+          connection.query(sql, (err, result) => {
+            if (err) {
+              return res.status(400).send({
+                code: err.errno,
+                type: err.code,
+                message: err.sqlMessage,
+              });
+            }
+
+            return res.status(200).json({ userId, result });
+          });
+        }
+      }
+    );
+});
+
 /// APPLICATION AVAILABILITY
+
+app.get(basePath + '/ping', (req, res) => {
+  return res.send('pong');
+});
 
 app.listen(serverPort, () => {
   const url = new URL(serverApi);
