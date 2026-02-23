@@ -963,35 +963,46 @@ app.post(
   (req, res) => {
     const userId = req.params.uuid;
     const fileName = uuidv4() + '.jpg';
-    req.file &&
-      fs.rename(
-        req.file.path,
-        path.normalize(uploadsPath + uploadsRelativePath + fileName),
-        (err) => {
-          if (err) {
-            res.status(500).send(err);
-          } else {
-            const query = {
-              photo_url: uploadsRelativePath + fileName,
-            };
-            const sql = sqlString.format(
-              'update user set ? where uuid = ? limit 1',
-              [query, userId]
-            );
-            connection.query(sql, (err, result) => {
-              if (err) {
-                return res.status(400).send({
-                  code: err.errno,
-                  type: err.code,
-                  message: err.sqlMessage,
-                });
-              }
 
-              return res.status(200).json({ userId, result });
-            });
-          }
+    if (!req.file) {
+      return res.status(400).send({ message: 'No file uploaded' });
+    }
+
+    const uploadRoot = path.resolve(uploadsPath);
+    const targetPath = path.resolve(uploadRoot, uploadsRelativePath, fileName);
+
+    if (!(targetPath === uploadRoot || targetPath.startsWith(uploadRoot + path.sep))) {
+      return res.status(400).send({ message: 'Invalid upload path' });
+    }
+
+    fs.rename(
+      req.file.path,
+      targetPath,
+      (err) => {
+        if (err) {
+          res.status(500).send(err);
+        } else {
+          const query = {
+            photo_url: uploadsRelativePath + fileName,
+          };
+          const sql = sqlString.format(
+            'update user set ? where uuid = ? limit 1',
+            [query, userId]
+          );
+          connection.query(sql, (err, result) => {
+            if (err) {
+              return res.status(400).send({
+                code: err.errno,
+                type: err.code,
+                message: err.sqlMessage,
+              });
+            }
+
+            return res.status(200).json({ userId, result });
+          });
         }
-      );
+      }
+    );
   }
 );
 
