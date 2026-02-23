@@ -23,6 +23,7 @@ import session from 'express-session';
 import { sessionSecret } from './credentials/salt';
 import { rateLimit } from 'express-rate-limit';
 import path from 'path';
+import lusca from 'lusca';
 
 const app = express();
 const uploadRoot = path.join(uploadsPath, uploadsRelativePath);
@@ -39,6 +40,11 @@ const upload = multer({
     },
   }),
 });
+
+// Apply CSRF protection for all routes that rely on cookie-based authentication.
+// This should be registered after cookieParser/session setup (configured elsewhere
+// in this file) and before any state-changing route handlers.
+app.use(lusca.csrf());
 
 const uploadImageRateLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
