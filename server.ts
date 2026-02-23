@@ -25,12 +25,12 @@ import { rateLimit } from 'express-rate-limit';
 import path from 'path';
 
 const app = express();
+const uploadRoot = path.join(uploadsPath, uploadsRelativePath);
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
       // Ensure uploads are stored under the configured uploads directory
-      const uploadDir = path.join(uploadsPath, uploadsRelativePath);
-      cb(null, uploadDir);
+      cb(null, uploadRoot);
     },
     filename: (req, file, cb) => {
       // Use a server-generated filename to avoid using any user-controlled path parts
@@ -549,7 +549,7 @@ app.post(
     req.file &&
       fs.rename(
         req.file.path,
-        path.normalize(uploadsPath + uploadsRelativePath + fileName),
+        path.join(uploadRoot, fileName),
         (err) => {
           if (err) {
             res.status(500).send(err);
