@@ -25,7 +25,20 @@ import { rateLimit } from 'express-rate-limit';
 import path from 'path';
 
 const app = express();
-const upload = multer({ dest: '/tmp/' });
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      // Ensure uploads are stored under the configured uploads directory
+      const uploadDir = path.join(uploadsPath, uploadsRelativePath);
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      // Use a server-generated filename to avoid using any user-controlled path parts
+      const generatedName = uuidv4() + '.jpg';
+      cb(null, generatedName);
+    },
+  }),
+});
 
 const uploadImageRateLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
