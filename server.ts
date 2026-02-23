@@ -27,6 +27,11 @@ import path from 'path';
 const app = express();
 const upload = multer({ dest: '/tmp/' });
 
+const uploadImageRateLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 10, // limit each IP to 10 image upload requests per windowMs
+});
+
 const connection = mysql.createConnection(credentials);
 connection.connect(function (err) {
   if (err) {
@@ -951,39 +956,44 @@ app.delete(basePath + 'user/:uuid', checkAuthentication, (req, res) => {
   }
 });
 
-app.post(basePath + 'user/:uuid/image', checkAuthentication, (req, res) => {
-  const userId = req.params.uuid;
-  const fileName = uuidv4() + '.jpg';
-  req.file &&
-    fs.rename(
-      req.file.path,
-      path.normalize(uploadsPath + uploadsRelativePath + fileName),
-      (err) => {
-        if (err) {
-          res.status(500).send(err);
-        } else {
-          const query = {
-            photo_url: uploadsRelativePath + fileName,
-          };
-          const sql = sqlString.format(
-            'update user set ? where uuid = ? limit 1',
-            [query, userId]
-          );
-          connection.query(sql, (err, result) => {
-            if (err) {
-              return res.status(400).send({
-                code: err.errno,
-                type: err.code,
-                message: err.sqlMessage,
-              });
-            }
+app.post(
+  basePath + 'user/:uuid/image',
+  checkAuthentication,
+  uploadImageRateLimiter,
+  (req, res) => {
+    const userId = req.params.uuid;
+    const fileName = uuidv4() + '.jpg';
+    req.file &&
+      fs.rename(
+        req.file.path,
+        path.normalize(uploadsPath + uploadsRelativePath + fileName),
+        (err) => {
+          if (err) {
+            res.status(500).send(err);
+          } else {
+            const query = {
+              photo_url: uploadsRelativePath + fileName,
+            };
+            const sql = sqlString.format(
+              'update user set ? where uuid = ? limit 1',
+              [query, userId]
+            );
+            connection.query(sql, (err, result) => {
+              if (err) {
+                return res.status(400).send({
+                  code: err.errno,
+                  type: err.code,
+                  message: err.sqlMessage,
+                });
+              }
 
-            return res.status(200).json({ userId, result });
-          });
+              return res.status(200).json({ userId, result });
+            });
+          }
         }
-      }
-    );
-});
+      );
+  }
+);
 
 /// APPLICATION AVAILABILITY
 
