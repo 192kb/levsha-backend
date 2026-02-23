@@ -552,35 +552,45 @@ app.post(
   upload.single('taskImage'),
   (req, res) => {
     const fileName = uuidv4() + '.jpg';
-    req.file &&
-      fs.rename(
-        req.file.path,
-        path.join(uploadRoot, fileName),
-        (err) => {
-          if (err) {
-            res.status(500).send(err);
-          } else {
-            const query = {
-              uuid: uuidv4(),
-              task_id: null,
-              url: uploadsRelativePath + fileName,
-              user_id: (req.session as any)?.passport?.user,
-            };
-            const sql = sqlString.format('insert into task_image set ?', query);
-            connection.query(sql, (err, result) => {
-              if (err) {
-                return res.status(400).send({
-                  code: err.errno,
-                  type: err.code,
-                  message: err.sqlMessage,
-                });
-              }
+    if (!req.file || !req.file.path) {
+      return res.status(400).send({ message: 'No file uploaded.' });
+    }
 
-              return res.json(query);
-            });
-          }
+    const sourcePath = path.resolve(req.file.path);
+
+    // Ensure the uploaded file is within the expected upload root
+    if (!sourcePath.startsWith(uploadRoot)) {
+      return res.status(400).send({ message: 'Invalid upload path.' });
+    }
+
+    fs.rename(
+      sourcePath,
+      path.join(uploadRoot, fileName),
+      (err) => {
+        if (err) {
+          res.status(500).send(err);
+        } else {
+          const query = {
+            uuid: uuidv4(),
+            task_id: null,
+            url: uploadsRelativePath + fileName,
+            user_id: (req.session as any)?.passport?.user,
+          };
+          const sql = sqlString.format('insert into task_image set ?', query);
+          connection.query(sql, (err, result) => {
+            if (err) {
+              return res.status(400).send({
+                code: err.errno,
+                type: err.code,
+                message: err.sqlMessage,
+              });
+            }
+
+            return res.json(query);
+          });
         }
-      );
+      }
+    );
   }
 );
 
