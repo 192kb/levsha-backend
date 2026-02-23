@@ -17,7 +17,7 @@
     "path": "^0.12.7",
     "sqlstring": "^2.3.3",
     "typescript": "^4.7.3",
-    "uuid": "^8.3.2"
+    "uuid": "^13.0.0"
   },
   "scripts": {
     "start": "ts-node server.ts"
