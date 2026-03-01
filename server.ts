@@ -1005,7 +1005,7 @@ app.post(
     }
 
     const sourcePath = path.resolve(req.file.path);
-    const tempUploadRoot = path.resolve(uploadRoot);
+    const tempUploadRoot = path.resolve(uploadsPath);
     if (!(sourcePath === tempUploadRoot || sourcePath.startsWith(tempUploadRoot + path.sep))) {
       return res.status(400).send({ message: 'Invalid source upload path' });
     }
