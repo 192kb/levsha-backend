@@ -1004,8 +1004,14 @@ app.post(
       return res.status(400).send({ message: 'Invalid upload path' });
     }
 
+    const sourcePath = path.resolve(req.file.path);
+    const tempUploadRoot = path.resolve(uploadRoot);
+    if (!(sourcePath === tempUploadRoot || sourcePath.startsWith(tempUploadRoot + path.sep))) {
+      return res.status(400).send({ message: 'Invalid source upload path' });
+    }
+
     fs.rename(
-      req.file.path,
+      sourcePath,
       targetPath,
       (err) => {
         if (err) {
