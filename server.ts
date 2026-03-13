@@ -23,9 +23,28 @@ import session from 'express-session';
 import { sessionSecret } from './credentials/salt';
 import { rateLimit } from 'express-rate-limit';
 import path from 'path';
+import lusca from 'lusca';
 
 const app = express();
-const upload = multer({ dest: '/tmp/' });
+const uploadRoot = path.join(uploadsPath, uploadsRelativePath);
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      // Ensure uploads are stored under the configured uploads directory
+      cb(null, uploadRoot);
+    },
+    filename: (req, file, cb) => {
+      // Use a server-generated filename to avoid using any user-controlled path parts
+      const generatedName = uuidv4() + '.jpg';
+      cb(null, generatedName);
+    },
+  }),
+});
+
+// Apply CSRF protection for all routes that rely on cookie-based authentication.
+// This should be registered after cookieParser/session setup (configured elsewhere
+// in this file) and before any state-changing route handlers.
+app.use(lusca.csrf());
 
 const uploadImageRateLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
@@ -533,35 +552,45 @@ app.post(
   upload.single('taskImage'),
   (req, res) => {
     const fileName = uuidv4() + '.jpg';
-    req.file &&
-      fs.rename(
-        req.file.path,
-        path.normalize(uploadsPath + uploadsRelativePath + fileName),
-        (err) => {
-          if (err) {
-            res.status(500).send(err);
-          } else {
-            const query = {
-              uuid: uuidv4(),
-              task_id: null,
-              url: uploadsRelativePath + fileName,
-              user_id: (req.session as any)?.passport?.user,
-            };
-            const sql = sqlString.format('insert into task_image set ?', query);
-            connection.query(sql, (err, result) => {
-              if (err) {
-                return res.status(400).send({
-                  code: err.errno,
-                  type: err.code,
-                  message: err.sqlMessage,
-                });
-              }
+    if (!req.file || !req.file.path) {
+      return res.status(400).send({ message: 'No file uploaded.' });
+    }
 
-              return res.json(query);
-            });
-          }
+    const sourcePath = path.resolve(req.file.path);
+
+    // Ensure the uploaded file is within the expected upload root
+    if (!sourcePath.startsWith(uploadRoot)) {
+      return res.status(400).send({ message: 'Invalid upload path.' });
+    }
+
+    fs.rename(
+      sourcePath,
+      path.join(uploadRoot, fileName),
+      (err) => {
+        if (err) {
+          res.status(500).send(err);
+        } else {
+          const query = {
+            uuid: uuidv4(),
+            task_id: null,
+            url: uploadsRelativePath + fileName,
+            user_id: (req.session as any)?.passport?.user,
+          };
+          const sql = sqlString.format('insert into task_image set ?', query);
+          connection.query(sql, (err, result) => {
+            if (err) {
+              return res.status(400).send({
+                code: err.errno,
+                type: err.code,
+                message: err.sqlMessage,
+              });
+            }
+
+            return res.json(query);
+          });
         }
-      );
+      }
+    );
   }
 );
 
@@ -963,35 +992,52 @@ app.post(
   (req, res) => {
     const userId = req.params.uuid;
     const fileName = uuidv4() + '.jpg';
-    req.file &&
-      fs.rename(
-        req.file.path,
-        path.normalize(uploadsPath + uploadsRelativePath + fileName),
-        (err) => {
-          if (err) {
-            res.status(500).send(err);
-          } else {
-            const query = {
-              photo_url: uploadsRelativePath + fileName,
-            };
-            const sql = sqlString.format(
-              'update user set ? where uuid = ? limit 1',
-              [query, userId]
-            );
-            connection.query(sql, (err, result) => {
-              if (err) {
-                return res.status(400).send({
-                  code: err.errno,
-                  type: err.code,
-                  message: err.sqlMessage,
-                });
-              }
 
-              return res.status(200).json({ userId, result });
-            });
-          }
+    if (!req.file) {
+      return res.status(400).send({ message: 'No file uploaded' });
+    }
+
+    const uploadRoot = path.resolve(uploadsPath);
+    const targetPath = path.resolve(uploadRoot, uploadsRelativePath, fileName);
+
+    if (!(targetPath === uploadRoot || targetPath.startsWith(uploadRoot + path.sep))) {
+      return res.status(400).send({ message: 'Invalid upload path' });
+    }
+
+    const sourcePath = path.resolve(req.file.path);
+    const tempUploadRoot = path.resolve(uploadsPath);
+    if (!(sourcePath === tempUploadRoot || sourcePath.startsWith(tempUploadRoot + path.sep))) {
+      return res.status(400).send({ message: 'Invalid source upload path' });
+    }
+
+    fs.rename(
+      sourcePath,
+      targetPath,
+      (err) => {
+        if (err) {
+          res.status(500).send(err);
+        } else {
+          const query = {
+            photo_url: uploadsRelativePath + fileName,
+          };
+          const sql = sqlString.format(
+            'update user set ? where uuid = ? limit 1',
+            [query, userId]
+          );
+          connection.query(sql, (err, result) => {
+            if (err) {
+              return res.status(400).send({
+                code: err.errno,
+                type: err.code,
+                message: err.sqlMessage,
+              });
+            }
+
+            return res.status(200).json({ userId, result });
+          });
         }
-      );
+      }
+    );
   }
 );
 
