@@ -17,7 +17,7 @@
     "path": "^0.12.7",
     "sqlstring": "^2.3.3",
     "typescript": "^7.0.2",
-    "uuid": "^14.0.1",
+    "uuid": "^14.0.2",
     "lusca": "^1.7.0"
   },
   "scripts": {
