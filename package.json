@@ -30,7 +30,7 @@
     "@types/express": "^5.0.6",
     "@types/express-session": "^1.19.0",
     "@types/multer": "^2.2.0",
-    "@types/mysql": "^2.15.27",
+    "@types/mysql": "^2.15.28",
     "@types/passport": "^1.0.17",
     "@types/passport-instagram": "^1.0.5",
     "@types/passport-local": "^1.0.38",
